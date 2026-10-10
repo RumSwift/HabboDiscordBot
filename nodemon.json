@@ -1,0 +1,9 @@
+
+
+{
+  "exec": "node src/index.js",
+  "watch": ["src", ".env", "package.json"],
+  "ext": "js,json",
+  "ignore": ["node_modules/**", "logs/**", "coverage/**", "tests/**", "*.log", ".idea/**"],
+  "delay": 500
+}

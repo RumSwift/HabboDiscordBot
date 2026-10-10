@@ -1,0 +1,32 @@
+{
+  "name": "habboverifybot",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Discord bot that links Discord accounts to Habbo Hotel accounts via motto verification.",
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "mysql2": "^3.24.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1",
+    "vitest": "^5.0.3"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.10"
+  }
+}
