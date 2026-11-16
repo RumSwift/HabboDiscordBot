@@ -7,7 +7,6 @@ export class AuditNotificationWorker {
         this.DiscordAuditLogService = DiscordAuditLogService;
         this.Logger = Logger;
         this.Clock = Clock;
-        this.HasWarnedNotConfigured = false;
         this.Task = new IntervalTask({ Name: 'AuditNotificationWorker', IntervalMs, Task: () => this.ProcessPendingNotifications(), Logger });
     }
 
@@ -25,16 +24,6 @@ export class AuditNotificationWorker {
 
     async ProcessPendingNotifications({ Limit = 10 } = {}) {
         const Summary = { Delivered: 0, Retrying: 0, Failed: 0 };
-
-        if (!this.DiscordAuditLogService.IsConfigured()) {
-            // Leave notifications PENDING until a thread is configured.
-            if (!this.HasWarnedNotConfigured) {
-                this.Logger?.Warn('Audit notifications are queued but DISCORD_LOG_THREAD_ID is not set.');
-                this.HasWarnedNotConfigured = true;
-            }
-            return Summary;
-        }
-
         const Notifications = await this.NotificationRepository.ClaimDueNotifications({ Now: this.Clock(), Limit });
 
         for (const Notification of Notifications) {
@@ -57,6 +46,7 @@ export class AuditNotificationWorker {
                 this.Logger?.Warn(IsPermanent ? 'Audit notification failed permanently' : 'Audit notification delivery failed; will retry', {
                     NotificationId: Notification.NotificationId,
                     AuditLogId: Notification.AuditLogId,
+                    ChannelId: Notification.ChannelId,
                     AttemptCount: Notification.AttemptCount,
                     Error: DeliveryError,
                 });

@@ -10,6 +10,12 @@ import { VerificationChallengeRepository } from './Repositories/VerificationChal
 import { HabboLinkAuditRepository } from './Repositories/HabboLinkAuditRepository.js';
 import { AuditNotificationRepository } from './Repositories/AuditNotificationRepository.js';
 import { RoleOperationRepository } from './Repositories/RoleOperationRepository.js';
+import { GuildConfigurationRepository } from './Repositories/GuildConfigurationRepository.js';
+import { ModSanctionRepository } from './Repositories/ModSanctionRepository.js';
+import { MemberRoleSnapshotRepository } from './Repositories/MemberRoleSnapshotRepository.js';
+import { DmModRepository } from './Repositories/DmModRepository.js';
+import { ModMailRepository } from './Repositories/ModMailRepository.js';
+import { ModMailBanRepository } from './Repositories/ModMailBanRepository.js';
 import { HabboApiService } from './Services/HabboApiService.js';
 import { HabboLinkService } from './Services/HabboLinkService.js';
 import { VerificationService } from './Services/VerificationService.js';
@@ -20,12 +26,22 @@ import { DiscordAuditLogService } from './Services/DiscordAuditLogService.js';
 import { AuditNotificationWorker } from './Services/AuditNotificationWorker.js';
 import { AuditHistoryService } from './Services/AuditHistoryService.js';
 import { NicknameService } from './Services/NicknameService.js';
+import { MemberRoleRestoreService } from './Services/MemberRoleRestoreService.js';
+import { GuildLogService } from './Services/Logging/GuildLogService.js';
+import { MessageDeleteLogService } from './Services/Logging/MessageDeleteLogService.js';
+import { MessageEditLogService } from './Services/Logging/MessageEditLogService.js';
+import { RoleChangeLogService } from './Services/Logging/RoleChangeLogService.js';
+import { MemberJoinLogService } from './Services/Logging/MemberJoinLogService.js';
+import { MemberLeaveLogService } from './Services/Logging/MemberLeaveLogService.js';
+import { SayLogService } from './Services/Logging/SayLogService.js';
+import { ModActionLogService } from './Services/Logging/ModActionLogService.js';
 import { IntervalTask } from './Utils/IntervalTask.js';
 
 const DefaultDependencies = {
     CreateDatabasePool,
     TestDatabaseConnection,
     RunMigrations,
+    SeedGuildConfiguration: (Pool, GuildSeed, Options) => new GuildConfigurationRepository(Pool).SeedIfEmpty(GuildSeed, Options),
     LoadCommands,
     RegisterGlobalCommands,
     CreateDiscordClient,
@@ -68,6 +84,7 @@ export class Application {
             await Deps.TestDatabaseConnection(this.Pool);
             Logger.Info('Database connection OK.');
             await Deps.RunMigrations(this.Pool, { Logger });
+            await Deps.SeedGuildConfiguration(this.Pool, Config.GuildSeed, { Logger });
 
             this.DiscordClient = Deps.CreateDiscordClient();
             this.Services = this.CreateServices();
@@ -89,6 +106,7 @@ export class Application {
             Logger.Info('Connecting to Discord...');
             await Deps.LoginDiscordClient(this.DiscordClient, Config.Discord.Token);
 
+            await this.CheckGuildConfiguration();
             this.StartBackgroundTasks();
 
             Logger.Info('HabboVerifyBot is ready.');
@@ -107,6 +125,7 @@ export class Application {
         const AuditRepository = new HabboLinkAuditRepository(Pool);
         const NotificationRepository = new AuditNotificationRepository(Pool);
         const RoleOperationRepositoryInstance = new RoleOperationRepository(Pool);
+        const GuildConfiguration = new GuildConfigurationRepository(Pool);
 
         const HabboApi = new HabboApiService({ TimeoutMs: Config.HabboApi.TimeoutMs, MaxRetries: Config.HabboApi.MaxRetries, Logger });
 
@@ -117,7 +136,7 @@ export class Application {
             NotificationRepository,
             RoleOperationRepository: RoleOperationRepositoryInstance,
             ChallengeRepository,
-            HotelRoleIds: Config.Discord.HotelRoleIds,
+            GuildConfigurationRepository: GuildConfiguration,
             Logger,
         });
 
@@ -131,14 +150,29 @@ export class Application {
             Logger,
         });
 
+        const GuildLogs = new GuildLogService({ Client: DiscordClient, GuildConfigurationRepository: GuildConfiguration, Logger });
+
         return {
+            GuildConfigurationRepository: GuildConfiguration,
+            DmModRepository: new DmModRepository(Pool),
+            ModMailRepository: new ModMailRepository(Pool),
+            ModMailBanRepository: new ModMailBanRepository(Pool),
+            ModSanctionRepository: new ModSanctionRepository(Pool),
+            ModActionLogService: new ModActionLogService({ GuildLogService: GuildLogs }),
+            MessageDeleteLogService: new MessageDeleteLogService({ GuildLogService: GuildLogs }),
+            MessageEditLogService: new MessageEditLogService({ GuildLogService: GuildLogs }),
+            RoleChangeLogService: new RoleChangeLogService({ GuildLogService: GuildLogs }),
+            MemberJoinLogService: new MemberJoinLogService({ GuildLogService: GuildLogs }),
+            MemberLeaveLogService: new MemberLeaveLogService({ GuildLogService: GuildLogs }),
+            SayLogService: new SayLogService({ GuildLogService: GuildLogs }),
+            MemberRoleRestoreService: new MemberRoleRestoreService({ SnapshotRepository: new MemberRoleSnapshotRepository(Pool), GuildConfigurationRepository: GuildConfiguration, Logger }),
             HabboApiService: HabboApi,
             HabboLinkService: LinkService,
             VerificationService: Verification,
             SessionService: new VerificationSessionService({ VerificationService: Verification, Logger }),
             AuditHistoryService: new AuditHistoryService({ LinkRepository, AuditRepository, NotificationRepository }),
             // null when ENFORCE_NICKNAMES=false; every caller treats it as optional.
-            NicknameService: Config.Discord.EnforceNicknames ? new NicknameService({ Client: DiscordClient, LinkRepository, Logger, IntervalMs: Config.Discord.NicknameSweepIntervalSeconds * 1000 }) : null,
+            NicknameService: Config.Discord.EnforceNicknames ? new NicknameService({ Client: DiscordClient, LinkRepository, GuildConfigurationRepository: GuildConfiguration, Logger, IntervalMs: Config.Discord.NicknameSweepIntervalSeconds * 1000 }) : null,
             RoleRecoveryService: new RoleRecoveryService({
                 RoleOperationRepository: RoleOperationRepositoryInstance,
                 LinkRepository,
@@ -147,10 +181,31 @@ export class Application {
             }),
             AuditNotificationWorker: new AuditNotificationWorker({
                 NotificationRepository,
-                DiscordAuditLogService: new DiscordAuditLogService({ Client: DiscordClient, LogThreadId: Config.Discord.LogThreadId, Logger }),
+                DiscordAuditLogService: new DiscordAuditLogService({ Client: DiscordClient, Logger }),
                 Logger,
             }),
         };
+    }
+
+    async CheckGuildConfiguration() {
+        const { Logger, DiscordClient } = this;
+        const Guilds = await this.Services.GuildConfigurationRepository.GetGuilds();
+        if (Guilds.length === 0) {
+            Logger.Warn('No servers in the Guilds table: roles, nicknames and audit logs are disabled until one is added.');
+        }
+        for (const Guild of Guilds) {
+            const DiscordGuild = DiscordClient.guilds?.cache?.get(Guild.GuildId);
+            if (!DiscordGuild) {
+                Logger.Warn('The bot is not in a configured server', { Name: Guild.Name, GuildId: Guild.GuildId });
+                continue;
+            }
+            // Discord only reports a member leaving if they are cached, and their roles are needed to restore them later.
+            try {
+                await DiscordGuild.members?.fetch?.();
+            } catch (FetchError) {
+                Logger.Warn('Could not cache server members; roles of members who leave may not be saved', { Name: Guild.Name, GuildId: Guild.GuildId, Error: FetchError });
+            }
+        }
     }
 
     StartBackgroundTasks() {

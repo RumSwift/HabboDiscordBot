@@ -6,16 +6,17 @@ import {
     HandleCheckMotto,
     HandleDashboard,
     HandleLink,
+    HandleSelectGame,
     HandleSelectHotel,
     HandleUsernameModal,
 } from '../Flows/VerificationFlow.js';
-import { HandleConfirmUnlink, HandleUnlink } from '../Flows/UnlinkFlow.js';
+import { HandleConfirmUnlink, HandleUnlink, HandleUnlinkGame } from '../Flows/UnlinkFlow.js';
 
 export default {
     // Discord only allows lowercase command names, so "VerifyHabbo" is registered as "verifyhabbo".
     Data: new SlashCommandBuilder()
         .setName(VerifyCommandName)
-        .setDescription('Link your Discord account to your Habbo account.')
+        .setDescription('Link your Discord account to your Habbo and Habbo Origins accounts.')
         .setContexts(InteractionContextType.Guild),
 
     async Execute(Interaction, Context) {
@@ -26,11 +27,13 @@ export default {
     ComponentHandlers: {
         Dashboard: HandleDashboard,
         Link: HandleLink,
+        SelectGame: HandleSelectGame,
         SelectHotel: HandleSelectHotel,
         TryAgain: HandleSelectHotel,
         CheckMotto: HandleCheckMotto,
         Cancel: HandleCancel,
         Unlink: HandleUnlink,
+        UnlinkGame: HandleUnlinkGame,
         ConfirmUnlink: HandleConfirmUnlink,
     },
 

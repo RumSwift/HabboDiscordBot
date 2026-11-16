@@ -1,5 +1,5 @@
 import { ApiError } from './Middleware/ErrorHandler.js';
-import { IsValidHotelCode } from '../Utils/HotelConfiguration.js';
+import { IsValidGame, IsValidHotelCode } from '../Utils/HotelConfiguration.js';
 
 export function RequireDiscordUserId(Value) {
     if (typeof Value !== 'string' || !/^\d{17,20}$/.test(Value)) {
@@ -18,6 +18,16 @@ export function RequireHotelCode(Value) {
 export function RequireHabboUniqueId(Value) {
     if (typeof Value !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(Value)) {
         throw new ApiError(400, 'INVALID_HABBO_UNIQUE_ID', 'HabboUniqueId must be 1-64 letters, digits or hyphens.');
+    }
+    return Value;
+}
+
+export function OptionalGame(Value) {
+    if (Value === undefined || Value === null) {
+        return null;
+    }
+    if (!IsValidGame(Value)) {
+        throw new ApiError(400, 'INVALID_GAME', 'Game must be HABBO or ORIGINS.');
     }
     return Value;
 }

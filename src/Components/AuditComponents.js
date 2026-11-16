@@ -1,6 +1,11 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown, time, TimestampStyles, userMention } from 'discord.js';
 import { BuildCustomId } from '../Utils/CustomId.js';
-import { Colours, View } from './ComponentStyles.js';
+import { FormatHotel, FormatHotelEmoji, GameLabels, Games } from '../Utils/HotelConfiguration.js';
+import { Colours, Emojis, FormatEmoji, View } from './ComponentStyles.js';
+
+const ActiveIcon = FormatEmoji(Emojis.Plus);
+const InactiveIcon = FormatEmoji(Emojis.Minus);
+const NeutralIcon = FormatEmoji(Emojis.Neutral);
 
 export const AuditHistoryPageSize = 20;
 
@@ -8,22 +13,24 @@ export const AuditHistoryPageSize = 20;
 const MaxAccountsShown = 15;
 
 function FormatAccountName(HabboUsername, HotelCode) {
-    return `**${escapeMarkdown(HabboUsername)}** (${HotelCode})`;
+    return [FormatHotelEmoji(HotelCode), `**${escapeMarkdown(HabboUsername)}** (${FormatHotel(HotelCode)})`].filter(Boolean).join(' ');
 }
 
 export function BuildAuditSummaryView({ OwnerDiscordUserId, TargetDiscordUserId, TargetAvatarUrl = null, Accounts, Summary }) {
     const Lines = [`**Discord User:** ${userMention(TargetDiscordUserId)} (${TargetDiscordUserId})`, ''];
 
-    const ActiveLink = Summary.ActiveLink;
-    Lines.push('**Current Link**');
-    Lines.push(
-        ActiveLink
-            ? `🟢 ${FormatAccountName(ActiveLink.HabboUsername, ActiveLink.HotelCode)} since ${time(new Date(ActiveLink.LinkedTimestamp), TimestampStyles.LongDateTime)}`
-            : '⚪ Not currently linked',
-    );
+    Lines.push('**Current Links**');
+    for (const Game of Object.values(Games)) {
+        const ActiveLink = Summary.ActiveLinks.find((Link) => Link.Game === Game);
+        Lines.push(
+            ActiveLink
+                ? `${ActiveIcon} ${GameLabels[Game]}: ${FormatAccountName(ActiveLink.HabboUsername, ActiveLink.HotelCode)} since ${time(new Date(ActiveLink.LinkedTimestamp), TimestampStyles.LongDateTime)}`
+                : `${NeutralIcon} ${GameLabels[Game]}: Not currently linked`,
+        );
+    }
     Lines.push('');
 
-    Lines.push(`**Linked Habbo Accounts (${Accounts.length})**`);
+    Lines.push(`**Linked Accounts (${Accounts.length})**`);
     if (Accounts.length === 0) {
         Lines.push('This user has never linked a Habbo account.');
     }
@@ -32,7 +39,7 @@ export function BuildAuditSummaryView({ OwnerDiscordUserId, TargetDiscordUserId,
             ? 'Active'
             : `Unlinked ${time(new Date(Account.LastUnlinkedTimestamp), TimestampStyles.ShortDate)}`;
         Lines.push(
-            `${Account.IsActive ? '🟢' : '🔴'} ${FormatAccountName(Account.HabboUsername, Account.HotelCode)}\n` +
+            `${Account.IsActive ? ActiveIcon : InactiveIcon} ${FormatAccountName(Account.HabboUsername, Account.HotelCode)}\n` +
                 `   Linked ${Account.LinkCount}× · first ${time(new Date(Account.FirstLinkedTimestamp), TimestampStyles.ShortDate)}` +
                 ` · last ${time(new Date(Account.LastLinkedTimestamp), TimestampStyles.ShortDate)} · ${Status}`,
         );
@@ -70,7 +77,7 @@ export function FormatAuditEventLine(Event) {
         Notes.push(`via ${Event.Details.Source}`);
     }
     const NoteText = Notes.length > 0 ? ` · *${Notes.join(', ')}*` : '';
-    return `${IsLinked ? '✅' : '❌'} **${Event.ActionType}** ${FormatAccountName(Event.HabboUsername, Event.HotelCode)} · ${time(new Date(Event.EventTimestamp), TimestampStyles.ShortDateTime)}${NoteText}`;
+    return `${IsLinked ? ActiveIcon : InactiveIcon} **${Event.ActionType}** ${FormatAccountName(Event.HabboUsername, Event.HotelCode)} · ${time(new Date(Event.EventTimestamp), TimestampStyles.ShortDateTime)}${NoteText}`;
 }
 
 export function BuildAuditHistoryView({ OwnerDiscordUserId, TargetDiscordUserId, Events, Page, TotalPages }) {
@@ -87,13 +94,13 @@ export function BuildAuditHistoryView({ OwnerDiscordUserId, TargetDiscordUserId,
         new ButtonBuilder()
             .setCustomId(BuildCustomId('AuditHistory', OwnerDiscordUserId, TargetDiscordUserId, Page - 1))
             .setLabel('Previous')
-            .setEmoji('◀️')
+            .setEmoji(Emojis.ArrowLeft)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(Page <= 1),
         new ButtonBuilder()
             .setCustomId(BuildCustomId('AuditHistory', OwnerDiscordUserId, TargetDiscordUserId, Page + 1))
             .setLabel('Next')
-            .setEmoji('▶️')
+            .setEmoji(Emojis.ArrowRight)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(Page >= TotalPages),
         new ButtonBuilder()

@@ -5,11 +5,11 @@ export async function HandleMemberJoin(Member, Context) {
     const DiscordUserId = Member.id;
     const { HabboLinkService, RoleRecoveryService, NicknameService } = Context.Services;
 
-    const ActiveLink = await HabboLinkService.QueueRoleRestore(DiscordUserId);
+    const ActiveLink = await HabboLinkService.QueueRoleRestore(DiscordUserId, Member.guild?.id);
     if (!ActiveLink) {
         return;
     }
-    Context.Logger.Info('Verified member joined; restoring role and nickname', { DiscordUserId, HotelCode: ActiveLink.HotelCode });
+    Context.Logger.Info('Verified member joined; restoring role and nickname', { DiscordUserId, GuildId: Member.guild?.id, HotelCode: ActiveLink.HotelCode });
 
     try {
         await RoleRecoveryService.ProcessDueOperations({ DiscordUserId });

@@ -10,7 +10,6 @@ export class VerificationSessionService {
         this.Logger = Logger;
         this.Clock = Clock;
         this.SessionsByUserId = new Map();
-        this.CleanupTimers = new Set();
         this.CountdownTask = new IntervalTask({ Name: 'VerificationCountdown', IntervalMs: CountdownIntervalMs, Task: () => this.TickCountdowns(), Logger });
     }
 
@@ -20,10 +19,6 @@ export class VerificationSessionService {
 
     async Stop() {
         await this.CountdownTask.Stop();
-        for (const Timer of this.CleanupTimers) {
-            clearTimeout(Timer);
-        }
-        this.CleanupTimers.clear();
         this.SessionsByUserId.clear();
     }
 
@@ -64,22 +59,6 @@ export class VerificationSessionService {
 
     ClearSession(DiscordUserId) {
         this.SessionsByUserId.delete(DiscordUserId);
-    }
-
-    ScheduleMessageCleanup(Interaction, DelayMs = 5000) {
-        const Timer = setTimeout(async () => {
-            this.CleanupTimers.delete(Timer);
-            try {
-                await Interaction.deleteReply();
-            } catch {
-                // Deleting can fail (e.g. the message is gone). Fall back to a plain message.
-                await Interaction.editReply({ content: 'Verification cancelled.', embeds: [], components: [] }).catch((EditError) => {
-                    this.Logger?.Debug('Could not clear cancelled verification message', { Error: EditError });
-                });
-            }
-        }, DelayMs);
-        Timer.unref?.();
-        this.CleanupTimers.add(Timer);
     }
 
     async TickCountdowns() {

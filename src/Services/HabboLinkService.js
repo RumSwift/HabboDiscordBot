@@ -3,6 +3,8 @@ import { WithTransaction, IsDuplicateKeyError } from '../Database/DatabaseConnec
 import { AuditActionTypes } from '../Repositories/HabboLinkAuditRepository.js';
 import { ChallengeStatuses } from '../Repositories/VerificationChallengeRepository.js';
 import { RoleOperationTypes } from '../Repositories/RoleOperationRepository.js';
+import { LogChannelTypes } from '../Repositories/GuildConfigurationRepository.js';
+import { GetHotel } from '../Utils/HotelConfiguration.js';
 
 export const LinkSources = Object.freeze({ Verification: 'VERIFICATION' });
 
@@ -14,6 +16,7 @@ export const LinkOutcomes = Object.freeze({
     ChallengeExpired: 'CHALLENGE_EXPIRED',
     NoActiveLink: 'NO_ACTIVE_LINK',
     LinkChanged: 'LINK_CHANGED',
+    GameRequired: 'GAME_REQUIRED',
 });
 
 class LinkAbort extends Error {
@@ -24,19 +27,20 @@ class LinkAbort extends Error {
 }
 
 export class HabboLinkService {
-    constructor({ Pool, LinkRepository, AuditRepository, NotificationRepository, RoleOperationRepository, ChallengeRepository, HotelRoleIds, Logger, Clock = () => new Date() }) {
+    constructor({ Pool, LinkRepository, AuditRepository, NotificationRepository, RoleOperationRepository, ChallengeRepository, GuildConfigurationRepository, Logger, Clock = () => new Date() }) {
         this.Pool = Pool;
         this.LinkRepository = LinkRepository;
         this.AuditRepository = AuditRepository;
         this.NotificationRepository = NotificationRepository;
         this.RoleOperationRepository = RoleOperationRepository;
         this.ChallengeRepository = ChallengeRepository;
-        this.HotelRoleIds = HotelRoleIds;
+        this.GuildConfigurationRepository = GuildConfigurationRepository;
         this.Logger = Logger;
         this.Clock = Clock;
     }
 
     async CompleteVerifiedLink({ ChallengeId, DiscordUserId, HabboUniqueId, HabboUsername, HotelCode }) {
+        const Game = GetHotel(HotelCode).Game;
         try {
             return await WithTransaction(this.Pool, async (Connection) => {
                 const Now = this.Clock();
@@ -55,7 +59,8 @@ export class HabboLinkService {
                 }
 
                 const OperationId = randomUUID();
-                const PreviousLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, Connection, { ForUpdate: true });
+                // Only the link for the same game is replaced; the other game's link is untouched.
+                const PreviousLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, Game, Connection, { ForUpdate: true });
 
                 if (PreviousLink) {
                     await this.LinkRepository.MarkLinkUnlinked(PreviousLink.LinkId, DiscordUserId, Now, Connection);
@@ -70,7 +75,7 @@ export class HabboLinkService {
 
                 // The unique indexes make a concurrent duplicate impossible.
                 const NewLinkId = await this.LinkRepository.InsertLink(
-                    { DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, LinkedTimestamp: Now, LinkSource: LinkSources.Verification, OperationId },
+                    { DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, Game, LinkedTimestamp: Now, LinkSource: LinkSources.Verification, OperationId },
                     Connection,
                 );
                 const NewLink = await this.LinkRepository.FindLinkById(NewLinkId, Connection);
@@ -90,9 +95,9 @@ export class HabboLinkService {
 
                 // Do not remove a role we are about to add again.
                 if (PreviousLink && PreviousLink.HotelCode !== HotelCode) {
-                    await this.QueueRoleOperation(Connection, { OperationId, Link: PreviousLink, OperationType: RoleOperationTypes.Remove, Now });
+                    await this.QueueRoleOperations(Connection, { OperationId, Link: PreviousLink, OperationType: RoleOperationTypes.Remove, Now });
                 }
-                await this.QueueRoleOperation(Connection, { OperationId, Link: NewLink, OperationType: RoleOperationTypes.Add, Now });
+                await this.QueueRoleOperations(Connection, { OperationId, Link: NewLink, OperationType: RoleOperationTypes.Add, Now });
 
                 return { Outcome: LinkOutcomes.Linked, NewLink, PreviousLink, OperationId };
             });
@@ -108,16 +113,26 @@ export class HabboLinkService {
         }
     }
 
-    async UnlinkDiscordUser({ DiscordUserId, ExpectedLinkId = null, Source = 'DISCORD', Reason = null }) {
+    // Pass Game or ExpectedLinkId to choose the link; without either, the user must have exactly one.
+    async UnlinkDiscordUser({ DiscordUserId, Game = null, ExpectedLinkId = null, Source = 'DISCORD', Reason = null }) {
         try {
             return await WithTransaction(this.Pool, async (Connection) => {
                 const Now = this.Clock();
-                const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, Connection, { ForUpdate: true });
-                if (!ActiveLink) {
+                const ActiveLinks = await this.LinkRepository.FindActiveLinksByDiscordUserId(DiscordUserId, Connection, { ForUpdate: true });
+                const Candidates = Game ? ActiveLinks.filter((Link) => Link.Game === Game) : ActiveLinks;
+
+                let ActiveLink;
+                if (ExpectedLinkId !== null) {
+                    ActiveLink = Candidates.find((Link) => String(Link.LinkId) === String(ExpectedLinkId));
+                    if (!ActiveLink) {
+                        throw new LinkAbort(Candidates.length === 0 ? LinkOutcomes.NoActiveLink : LinkOutcomes.LinkChanged);
+                    }
+                } else if (Candidates.length === 0) {
                     throw new LinkAbort(LinkOutcomes.NoActiveLink);
-                }
-                if (ExpectedLinkId !== null && String(ActiveLink.LinkId) !== String(ExpectedLinkId)) {
-                    throw new LinkAbort(LinkOutcomes.LinkChanged);
+                } else if (Candidates.length > 1) {
+                    throw new LinkAbort(LinkOutcomes.GameRequired);
+                } else {
+                    ActiveLink = Candidates[0];
                 }
 
                 const OperationId = randomUUID();
@@ -138,7 +153,7 @@ export class HabboLinkService {
                     Details,
                 });
 
-                await this.QueueRoleOperation(Connection, { OperationId, Link: ActiveLink, OperationType: RoleOperationTypes.Remove, Now });
+                await this.QueueRoleOperations(Connection, { OperationId, Link: ActiveLink, OperationType: RoleOperationTypes.Remove, Now });
                 await this.ChallengeRepository.CloseOpenChallengesForUser(DiscordUserId, ChallengeStatuses.Cancelled, Now, Connection);
 
                 return { Outcome: LinkOutcomes.Unlinked, Link: ActiveLink, UnlinkedTimestamp: Now, OperationId, AuditLogId };
@@ -151,14 +166,20 @@ export class HabboLinkService {
         }
     }
 
-    async QueueRoleRestore(DiscordUserId) {
-        const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId);
+    // A member joined GuildId: queue the role for their link to that server's game, if they have one.
+    async QueueRoleRestore(DiscordUserId, GuildId) {
+        const Guild = await this.GuildConfigurationRepository.FindGuildByGuildId(GuildId);
+        if (!Guild) {
+            return null;
+        }
+        const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, Guild.GuildType);
         if (ActiveLink) {
-            await this.QueueRoleOperation(this.Pool, { OperationId: randomUUID(), Link: ActiveLink, OperationType: RoleOperationTypes.Add, Now: this.Clock() });
+            await this.QueueRoleOperations(this.Pool, { OperationId: randomUUID(), Link: ActiveLink, OperationType: RoleOperationTypes.Add, Now: this.Clock(), GuildId });
         }
         return ActiveLink;
     }
 
+    // Writes the audit event plus one pending notification per verification log channel.
     async RecordAuditEvent(Connection, { OperationId, Link, ActionType, EventTimestamp, Details }) {
         const AuditLogId = await this.AuditRepository.InsertAuditEvent(
             {
@@ -174,19 +195,31 @@ export class HabboLinkService {
             },
             Connection,
         );
-        await this.NotificationRepository.InsertPendingNotification(AuditLogId, EventTimestamp, Connection);
+        const Channels = await this.GuildConfigurationRepository.GetLogChannels(LogChannelTypes.Verification, Connection);
+        if (Channels.length === 0) {
+            this.Logger?.Warn('No verification log channels configured; this event will not be posted', { AuditLogId });
+        }
+        for (const Channel of Channels) {
+            await this.NotificationRepository.InsertPendingNotification(AuditLogId, Channel.ChannelId, EventTimestamp, Connection);
+        }
         return AuditLogId;
     }
 
-    async QueueRoleOperation(Connection, { OperationId, Link, OperationType, Now }) {
-        const RoleId = this.HotelRoleIds[Link.HotelCode];
-        if (!RoleId) {
+    // Habbo roles only exist in Habbo servers and Origins roles only in Origins servers.
+    async QueueRoleOperations(Connection, { OperationId, Link, OperationType, Now, GuildId = null }) {
+        const Hotel = GetHotel(Link.HotelCode);
+        const Roles = (await this.GuildConfigurationRepository.GetRoles(Hotel.Game, Hotel.RoleType, Connection)).filter(
+            (Role) => GuildId === null || Role.GuildId === GuildId,
+        );
+        if (Roles.length === 0) {
             this.Logger?.Warn('No Discord role configured for hotel; skipping role change', { HotelCode: Link.HotelCode, OperationType });
             return;
         }
-        await this.RoleOperationRepository.InsertRoleOperation(
-            { OperationId, LinkId: Link.LinkId, DiscordUserId: Link.DiscordUserId, HotelCode: Link.HotelCode, RoleId, OperationType, Now },
-            Connection,
-        );
+        for (const Role of Roles) {
+            await this.RoleOperationRepository.InsertRoleOperation(
+                { OperationId, LinkId: Link.LinkId, DiscordUserId: Link.DiscordUserId, HotelCode: Link.HotelCode, RoleId: Role.RoleId, GuildId: Role.GuildId, OperationType, Now },
+                Connection,
+            );
+        }
     }
 }

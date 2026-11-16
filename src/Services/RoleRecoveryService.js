@@ -1,6 +1,9 @@
 import { IntervalTask } from '../Utils/IntervalTask.js';
 import { CalculateBackoffMs, DescribeError, IsPermanentFailure, MaxDeliveryAttempts } from '../Utils/RetryPolicy.js';
 import { RoleOperationTypes } from '../Repositories/RoleOperationRepository.js';
+import { GetHotel } from '../Utils/HotelConfiguration.js';
+
+const UnknownMemberErrorCode = 10007;
 
 export class RoleRecoveryService {
     constructor({ RoleOperationRepository, LinkRepository, DiscordRoleService, Logger, Clock = () => new Date(), IntervalMs = 30000 }) {
@@ -31,10 +34,10 @@ export class RoleRecoveryService {
     }
 
     async ProcessOperation(Operation) {
-        const { RoleOperationId, LockToken, DiscordUserId, HotelCode, RoleId, OperationType } = Operation;
+        const { RoleOperationId, LockToken, DiscordUserId, HotelCode, RoleId, GuildId, OperationType } = Operation;
 
         try {
-            const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId);
+            const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, GetHotel(HotelCode).Game);
             const ShouldHaveRole = ActiveLink?.HotelCode === HotelCode;
 
             if (OperationType === RoleOperationTypes.Add && !ShouldHaveRole) {
@@ -48,15 +51,21 @@ export class RoleRecoveryService {
 
             const Reason = `Habbo verification (${OperationType} ${HotelCode})`;
             if (OperationType === RoleOperationTypes.Add) {
-                await this.DiscordRoleService.AddRole(DiscordUserId, RoleId, Reason);
+                await this.DiscordRoleService.AddRole(DiscordUserId, RoleId, Reason, GuildId);
             } else {
-                await this.DiscordRoleService.RemoveRole(DiscordUserId, RoleId, Reason);
+                await this.DiscordRoleService.RemoveRole(DiscordUserId, RoleId, Reason, GuildId);
             }
 
             await this.RoleOperationRepository.MarkFinished(RoleOperationId, LockToken, 'COMPLETED', this.Clock());
-            this.Logger?.Info('Discord role updated', { DiscordUserId, HotelCode, OperationType });
+            this.Logger?.Info('Discord role updated', { DiscordUserId, HotelCode, GuildId, OperationType });
             return 'COMPLETED';
         } catch (RoleError) {
+            // Not in that server (yet). They get the role when they join.
+            if (RoleError?.code === UnknownMemberErrorCode) {
+                await this.RoleOperationRepository.MarkFinished(RoleOperationId, LockToken, 'SKIPPED', this.Clock(), 'Member is not in the server.');
+                this.Logger?.Debug('Role change skipped: member is not in the server', { DiscordUserId, GuildId, OperationType });
+                return 'SKIPPED';
+            }
             const IsPermanent = IsPermanentFailure(RoleError) || Operation.AttemptCount >= MaxDeliveryAttempts;
             const NextAttemptTimestamp = new Date(this.Clock().getTime() + CalculateBackoffMs(Operation.AttemptCount));
             await this.RoleOperationRepository.MarkAttemptFailed(RoleOperationId, LockToken, {

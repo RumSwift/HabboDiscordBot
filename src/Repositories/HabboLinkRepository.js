@@ -1,4 +1,4 @@
-const LinkColumns = `LinkId, DiscordUserId, HabboUniqueId, HabboUsername, HotelCode,
+const LinkColumns = `LinkId, DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, Game,
                      LinkedTimestamp, UnlinkedTimestamp, LinkSource, OperationId`;
 
 export class HabboLinkRepository {
@@ -6,13 +6,22 @@ export class HabboLinkRepository {
         this.Pool = Pool;
     }
 
-    async FindActiveLinkByDiscordUserId(DiscordUserId, Executor = this.Pool, { ForUpdate = false } = {}) {
+    async FindActiveLinkByDiscordUserId(DiscordUserId, Game, Executor = this.Pool, { ForUpdate = false } = {}) {
         const [Rows] = await Executor.query(
             `SELECT ${LinkColumns} FROM HabboLinks
-             WHERE ActiveDiscordUserId = ? ${ForUpdate ? 'FOR UPDATE' : ''}`,
-            [DiscordUserId],
+             WHERE ActiveDiscordUserId = ? AND Game = ? ${ForUpdate ? 'FOR UPDATE' : ''}`,
+            [DiscordUserId, Game],
         );
         return Rows[0] ?? null;
+    }
+
+    async FindActiveLinksByDiscordUserId(DiscordUserId, Executor = this.Pool, { ForUpdate = false } = {}) {
+        const [Rows] = await Executor.query(
+            `SELECT ${LinkColumns} FROM HabboLinks
+             WHERE ActiveDiscordUserId = ? ORDER BY Game ${ForUpdate ? 'FOR UPDATE' : ''}`,
+            [DiscordUserId],
+        );
+        return Rows;
     }
 
     async FindActiveLinkByHabboAccount(HotelCode, HabboUniqueId, Executor = this.Pool, { ForUpdate = false } = {}) {
@@ -39,12 +48,12 @@ export class HabboLinkRepository {
         return Rows.length > 0;
     }
 
-    async InsertLink({ DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, LinkedTimestamp, LinkSource, OperationId }, Executor = this.Pool) {
+    async InsertLink({ DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, Game, LinkedTimestamp, LinkSource, OperationId }, Executor = this.Pool) {
         const [Result] = await Executor.query(
             `INSERT INTO HabboLinks
-                (DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, LinkedTimestamp, LinkSource, OperationId)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, LinkedTimestamp, LinkSource, OperationId],
+                (DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, Game, LinkedTimestamp, LinkSource, OperationId)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, Game, LinkedTimestamp, LinkSource, OperationId],
         );
         return String(Result.insertId);
     }

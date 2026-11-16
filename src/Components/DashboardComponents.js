@@ -1,27 +1,33 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, time, TimestampStyles } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown, time, TimestampStyles } from 'discord.js';
 import { BuildCustomId } from '../Utils/CustomId.js';
+import { FormatHotel, GameLabels, Games } from '../Utils/HotelConfiguration.js';
 import { Colours, Thumbnails, View } from './ComponentStyles.js';
 
-export function BuildDashboardView({ OwnerDiscordUserId, ActiveLink }) {
+export function FormatLinkedAccount(Link) {
+    return `**${escapeMarkdown(Link.HabboUsername)}** (${FormatHotel(Link.HotelCode)})`;
+}
+
+export function BuildDashboardView({ OwnerDiscordUserId, ActiveLinks }) {
     const Embed = new EmbedBuilder()
         .setTitle('Welcome to the Habbo Discord Verify Dashboard')
         .setDescription(
             'Welcome to the Habbo verification dashboard!\n\n' +
-                'Here you can link your Habbo account to your Discord account, allowing us to confirm that you own the account.\n\n' +
-                'You can link an account, unlink your current account or link a different Habbo account whenever you need to.',
+                'Here you can link your Habbo and Habbo Origins accounts to your Discord account, allowing us to confirm that you own them.\n\n' +
+                'You can link one Habbo account and one Habbo Origins account, and unlink or replace either of them whenever you need to.',
         )
         .setColor(Colours.Primary)
         .setThumbnail(Thumbnails.Dashboard);
 
-    if (ActiveLink) {
+    for (const Game of Object.values(Games)) {
+        const Link = ActiveLinks.find((Candidate) => Candidate.Game === Game);
         Embed.addFields({
-            name: 'Currently Linked Account',
-            value: `**${ActiveLink.HabboUsername}** (${ActiveLink.HotelCode}) since ${time(new Date(ActiveLink.LinkedTimestamp), TimestampStyles.LongDate)}`,
+            name: `${GameLabels[Game]} Account`,
+            value: Link ? `${FormatLinkedAccount(Link)} since ${time(new Date(Link.LinkedTimestamp), TimestampStyles.LongDate)}` : 'Not linked',
         });
     }
 
     const Buttons = [new ButtonBuilder().setCustomId(BuildCustomId('Link', OwnerDiscordUserId)).setLabel('Link').setStyle(ButtonStyle.Success)];
-    if (ActiveLink) {
+    if (ActiveLinks.length > 0) {
         Buttons.push(new ButtonBuilder().setCustomId(BuildCustomId('Unlink', OwnerDiscordUserId)).setLabel('Unlink').setStyle(ButtonStyle.Danger));
     }
 

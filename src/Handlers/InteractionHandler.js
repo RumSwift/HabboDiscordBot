@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import { ParseCustomId } from '../Utils/CustomId.js';
+import { AnyUser, ParseCustomId } from '../Utils/CustomId.js';
 import { BuildErrorView, EphemeralView } from '../Components/ComponentStyles.js';
 
 export class InteractionHandler {
@@ -50,7 +50,7 @@ export class InteractionHandler {
             return;
         }
 
-        if (Parsed.OwnerDiscordUserId !== Interaction.user.id) {
+        if (Parsed.OwnerDiscordUserId !== AnyUser && Parsed.OwnerDiscordUserId !== Interaction.user.id) {
             this.Logger.Warn('User tried to use another user\'s menu', { DiscordUserId: Interaction.user.id, Action: Parsed.Action });
             await Interaction.reply({ content: 'This menu belongs to someone else. Run the command yourself to get your own.', flags: MessageFlags.Ephemeral });
             return;

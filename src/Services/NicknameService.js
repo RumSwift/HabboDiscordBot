@@ -12,9 +12,10 @@ export function BuildLinkedNickname(HabboUsername, HotelCode) {
 const FullMemberFetchCooldownMs = 30 * 60 * 1000;
 
 export class NicknameService {
-    constructor({ Client, LinkRepository, Logger, IntervalMs = 60 * 1000, Clock = () => Date.now() }) {
+    constructor({ Client, LinkRepository, GuildConfigurationRepository, Logger, IntervalMs = 60 * 1000, Clock = () => Date.now() }) {
         this.Client = Client;
         this.LinkRepository = LinkRepository;
+        this.GuildConfigurationRepository = GuildConfigurationRepository;
         this.Logger = Logger;
         this.Clock = Clock;
         this.LastFullFetch = new Map();
@@ -29,15 +30,24 @@ export class NicknameService {
         await this.Task.Stop();
     }
 
+    // Each server shows the account for its own game; servers not in the Guilds table are left alone.
     async SyncUser(DiscordUserId, { UnlinkedLink = null } = {}) {
         if (!this.Client?.isReady?.()) {
             return;
         }
-        const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId);
+        const [GuildTypes, ActiveLinks] = await Promise.all([
+            this.GuildConfigurationRepository.GetGuildTypesById(),
+            this.LinkRepository.FindActiveLinksByDiscordUserId(DiscordUserId),
+        ]);
         for (const Guild of this.Client.guilds.cache.values()) {
+            const GuildType = GuildTypes.get(Guild.id);
+            if (!GuildType) {
+                continue;
+            }
             const Member = await Guild.members.fetch(DiscordUserId).catch(() => null);
             if (Member) {
-                await this.ApplyNickname(Member, ActiveLink, UnlinkedLink);
+                const ActiveLink = ActiveLinks.find((Link) => Link.Game === GuildType) ?? null;
+                await this.ApplyNickname(Member, ActiveLink, UnlinkedLink?.Game === GuildType ? UnlinkedLink : null);
             }
         }
     }
@@ -46,7 +56,11 @@ export class NicknameService {
         if (Member.user?.bot) {
             return;
         }
-        const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(Member.id);
+        const Guild = await this.GuildConfigurationRepository.FindGuildByGuildId(Member.guild?.id);
+        if (!Guild) {
+            return;
+        }
+        const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(Member.id, Guild.GuildType);
         await this.ApplyNickname(Member, ActiveLink, null);
     }
 
@@ -54,14 +68,21 @@ export class NicknameService {
         if (!this.Client?.isReady?.()) {
             return;
         }
-        const ActiveLinks = await this.LinkRepository.GetAllActiveLinks();
+        const [GuildTypes, ActiveLinks] = await Promise.all([this.GuildConfigurationRepository.GetGuildTypesById(), this.LinkRepository.GetAllActiveLinks()]);
         if (ActiveLinks.length === 0) {
             return;
         }
 
         for (const Guild of this.Client.guilds.cache.values()) {
+            const GuildType = GuildTypes.get(Guild.id);
+            if (!GuildType) {
+                continue;
+            }
             await this.EnsureMembersCached(Guild);
             for (const Link of ActiveLinks) {
+                if (Link.Game !== GuildType) {
+                    continue;
+                }
                 // Not cached means they are not in this server (joins are cached as they happen).
                 const Member = Guild.members.cache.get(Link.DiscordUserId);
                 if (Member) {

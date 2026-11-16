@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 export const RoleOperationTypes = Object.freeze({ Add: 'ADD', Remove: 'REMOVE' });
 
-const RoleOperationColumns = `RoleOperationId, OperationId, LinkId, DiscordUserId, HotelCode, RoleId, OperationType,
+const RoleOperationColumns = `RoleOperationId, OperationId, LinkId, DiscordUserId, HotelCode, RoleId, GuildId, OperationType,
                               Status, AttemptCount, NextAttemptTimestamp, LockToken, LastError, CreatedTimestamp, CompletedTimestamp`;
 
 export class RoleOperationRepository {
@@ -10,12 +10,12 @@ export class RoleOperationRepository {
         this.Pool = Pool;
     }
 
-    async InsertRoleOperation({ OperationId, LinkId, DiscordUserId, HotelCode, RoleId, OperationType, Now }, Executor = this.Pool) {
+    async InsertRoleOperation({ OperationId, LinkId, DiscordUserId, HotelCode, RoleId, GuildId = null, OperationType, Now }, Executor = this.Pool) {
         const [Result] = await Executor.query(
             `INSERT INTO RoleOperations
-                (OperationId, LinkId, DiscordUserId, HotelCode, RoleId, OperationType, Status, AttemptCount, NextAttemptTimestamp, CreatedTimestamp)
-             VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, ?)`,
-            [OperationId, LinkId, DiscordUserId, HotelCode, RoleId, OperationType, Now, Now],
+                (OperationId, LinkId, DiscordUserId, HotelCode, RoleId, GuildId, OperationType, Status, AttemptCount, NextAttemptTimestamp, CreatedTimestamp)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, ?)`,
+            [OperationId, LinkId, DiscordUserId, HotelCode, RoleId, GuildId, OperationType, Now, Now],
         );
         return String(Result.insertId);
     }

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import dotenv from 'dotenv';
-import { Hotels } from '../Utils/HotelConfiguration.js';
+import { Games, Hotels } from '../Utils/HotelConfiguration.js';
 
 export class ConfigurationError extends Error {
     constructor(Problems) {
@@ -109,18 +109,27 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         Problems.push('DB_NAME may only contain letters, digits and underscores.');
     }
 
-    const HotelRoleIds = {};
-    for (const Hotel of Hotels) {
-        HotelRoleIds[Hotel.HotelCode] = OptionalSnowflake(Hotel.RoleEnvironmentVariable);
-    }
+    // Only used once, to fill the Guilds / GuildRoles / GuildLogChannels tables on first start.
+    const GuildSeed = [];
+    const SeedGuild = (GuildType, Name, GuildIdVariable, LogChannelVariable) => {
+        const GuildId = OptionalSnowflake(GuildIdVariable);
+        const Roles = Hotels.filter((Hotel) => Hotel.Game === GuildType)
+            .map((Hotel) => ({ RoleType: Hotel.RoleType, RoleId: OptionalSnowflake(Hotel.SeedRoleVariable) }))
+            .filter((Role) => Role.RoleId);
+        const LogChannelId = OptionalSnowflake(LogChannelVariable);
+        const LogChannels = LogChannelId ? [{ ChannelType: 'VERIFICATION', ChannelId: LogChannelId }] : [];
+        if (GuildId) {
+            GuildSeed.push({ GuildType, Name, GuildId, Roles, LogChannels });
+        }
+    };
+    SeedGuild(Games.Habbo, 'Habbo Discord', 'HABBO_GUILD_ID', 'DISCORD_LOG_THREAD_ID');
+    SeedGuild(Games.Origins, 'Habbo Origins Discord', 'ORIGINS_GUILD_ID', 'ORIGINS_LOG_CHANNEL_ID');
 
     const Discord = {
         Token: Required('DISCORD_TOKEN', { Trim: false }),
         ClientId: Required('DISCORD_CLIENT_ID'),
-        LogThreadId: OptionalSnowflake('DISCORD_LOG_THREAD_ID'),
         EnforceNicknames: OptionalBoolean('ENFORCE_NICKNAMES', true),
         NicknameSweepIntervalSeconds: Integer('NICKNAME_SWEEP_INTERVAL_SECONDS', 60, 30, 86400),
-        HotelRoleIds,
     };
     if (Discord.ClientId && !SnowflakePattern.test(Discord.ClientId)) {
         Problems.push('DISCORD_CLIENT_ID must be a Discord application ID (17-20 digits).');
@@ -166,7 +175,8 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
 
     return Object.freeze({
         Database: Object.freeze(Database),
-        Discord: Object.freeze({ ...Discord, HotelRoleIds: Object.freeze(HotelRoleIds) }),
+        Discord: Object.freeze(Discord),
+        GuildSeed: Object.freeze(GuildSeed),
         Api: Object.freeze(Api),
         Verification: Object.freeze(Verification),
         HabboApi: Object.freeze(HabboApi),
@@ -176,15 +186,6 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
 
 export function GetConfigurationWarnings(Config) {
     const Warnings = [];
-    const MissingRoles = Object.entries(Config.Discord.HotelRoleIds)
-        .filter(([, RoleId]) => !RoleId)
-        .map(([HotelCode]) => HotelCode);
-    if (MissingRoles.length > 0) {
-        Warnings.push(`No verification role configured for: ${MissingRoles.join(', ')}. Roles will not be assigned for these hotels.`);
-    }
-    if (!Config.Discord.LogThreadId) {
-        Warnings.push('DISCORD_LOG_THREAD_ID is not set. Audit notifications will be stored and delivered once it is configured.');
-    }
     if (!['127.0.0.1', 'localhost', '::1'].includes(Config.Api.Host)) {
         Warnings.push(`Internal API is bound to ${Config.Api.Host}. Remote access must be protected with HTTPS and network restrictions.`);
     }

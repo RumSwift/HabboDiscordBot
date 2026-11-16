@@ -1,12 +1,17 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Client, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Partials } from 'discord.js';
 
 const EventsDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), 'Events');
 
 export function CreateDiscordClient() {
-    return new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+    // MessageContent is privileged: without it deleted messages are logged with no text.
+    // DirectMessages + the Channel partial let the bot receive DMs for mod mail.
+    return new Client({
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
+        partials: [Partials.Channel],
+    });
 }
 
 export async function RegisterEvents(DiscordClient, EventContext) {
@@ -41,7 +46,7 @@ export async function LoginDiscordClient(DiscordClient, Token, { TimeoutMs = 600
     let TimeoutTimer;
     const ReadyPromise = new Promise((Resolve, Reject) => {
         DiscordClient.once(Events.ClientReady, Resolve);
-        TimeoutTimer = setTimeout(() => Reject(new Error('Timed out waiting for the Discord client to become ready. Check the Server Members Intent is enabled.')), TimeoutMs);
+        TimeoutTimer = setTimeout(() => Reject(new Error('Timed out waiting for the Discord client to become ready. Check the Server Members and Message Content intents are enabled.')), TimeoutMs);
     });
     try {
         await DiscordClient.login(Token);
@@ -49,8 +54,8 @@ export async function LoginDiscordClient(DiscordClient, Token, { TimeoutMs = 600
     } catch (LoginError) {
         if (LoginError?.code === 'DisallowedIntents' || /disallowed intents/i.test(String(LoginError?.message))) {
             throw new Error(
-                'Discord refused the Server Members intent. Enable it in the developer portal (Bot -> Privileged Gateway Intents -> ' +
-                    'Server Members Intent).',
+                'Discord refused a privileged intent. Enable both in the developer portal (Bot -> Privileged Gateway Intents -> ' +
+                    'Server Members Intent and Message Content Intent).',
                 { cause: LoginError },
             );
         }

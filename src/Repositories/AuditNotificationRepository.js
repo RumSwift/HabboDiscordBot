@@ -13,11 +13,11 @@ export class AuditNotificationRepository {
         this.Pool = Pool;
     }
 
-    async InsertPendingNotification(AuditLogId, Now, Executor = this.Pool) {
+    async InsertPendingNotification(AuditLogId, ChannelId, Now, Executor = this.Pool) {
         const [Result] = await Executor.query(
-            `INSERT INTO AuditNotificationOutbox (AuditLogId, Status, AttemptCount, NextAttemptTimestamp, CreatedTimestamp)
-             VALUES (?, 'PENDING', 0, ?, ?)`,
-            [AuditLogId, Now, Now],
+            `INSERT INTO AuditNotificationOutbox (AuditLogId, ChannelId, Status, AttemptCount, NextAttemptTimestamp, CreatedTimestamp)
+             VALUES (?, ?, 'PENDING', 0, ?, ?)`,
+            [AuditLogId, ChannelId, Now, Now],
         );
         return String(Result.insertId);
     }
@@ -41,10 +41,10 @@ export class AuditNotificationRepository {
         }
 
         const [Rows] = await this.Pool.query(
-            `SELECT n.NotificationId, n.AttemptCount, n.LockToken,
+            `SELECT n.NotificationId, n.ChannelId, n.AttemptCount, n.LockToken,
                     a.AuditLogId, a.OperationId, a.LinkId, a.DiscordUserId, a.HabboUniqueId, a.HabboUsername,
                     a.HotelCode, a.ActionType, a.EventTimestamp, a.Details,
-                    l.LinkedTimestamp AS OriginalLinkedTimestamp
+                    l.Game, l.LinkedTimestamp AS OriginalLinkedTimestamp
              FROM AuditNotificationOutbox n
              JOIN HabboLinkAuditLogs a ON a.AuditLogId = n.AuditLogId
              JOIN HabboLinks l ON l.LinkId = a.LinkId
@@ -92,13 +92,13 @@ export class AuditNotificationRepository {
         return Summary;
     }
 
-    async FindNotificationByAuditLogId(AuditLogId) {
+    async FindNotificationsByAuditLogId(AuditLogId) {
         const [Rows] = await this.Pool.query(
-            `SELECT NotificationId, AuditLogId, Status, AttemptCount, NextAttemptTimestamp, LastError,
+            `SELECT NotificationId, AuditLogId, ChannelId, Status, AttemptCount, NextAttemptTimestamp, LastError,
                     DiscordMessageId, CreatedTimestamp, DeliveredTimestamp
-             FROM AuditNotificationOutbox WHERE AuditLogId = ?`,
+             FROM AuditNotificationOutbox WHERE AuditLogId = ? ORDER BY NotificationId`,
             [AuditLogId],
         );
-        return Rows[0] ?? null;
+        return Rows;
     }
 }

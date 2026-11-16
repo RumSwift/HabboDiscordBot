@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { ApiError, SendSuccess } from '../Middleware/ErrorHandler.js';
-import { OptionalLinkId, OptionalReason, RequireDiscordUserId, RequireHabboUniqueId, RequireHotelCode, RequireOnlyFields } from '../Validation.js';
+import { OptionalGame, OptionalLinkId, OptionalReason, RequireDiscordUserId, RequireHabboUniqueId, RequireHotelCode, RequireOnlyFields } from '../Validation.js';
 import { LinkOutcomes } from '../../Services/HabboLinkService.js';
+import { Games } from '../../Utils/HotelConfiguration.js';
 
 function FormatLink(Link) {
     if (!Link) {
@@ -10,6 +11,7 @@ function FormatLink(Link) {
     return {
         LinkId: String(Link.LinkId),
         DiscordUserId: Link.DiscordUserId,
+        Game: Link.Game,
         HabboUniqueId: Link.HabboUniqueId,
         HabboUsername: Link.HabboUsername,
         HotelCode: Link.HotelCode,
@@ -24,8 +26,9 @@ export function CreateHabboLinkRoutes({ Services }) {
 
     LinkRouter.get('/links/discord/:DiscordUserId', async (Request, Response) => {
         const DiscordUserId = RequireDiscordUserId(Request.params.DiscordUserId);
-        const ActiveLink = await AuditHistoryService.GetActiveLinkForDiscordUser(DiscordUserId);
-        SendSuccess(Response, { DiscordUserId, HasActiveLink: Boolean(ActiveLink), ActiveLink: FormatLink(ActiveLink) });
+        const ActiveLinks = await AuditHistoryService.GetActiveLinksForDiscordUser(DiscordUserId);
+        const LinksByGame = Object.fromEntries(Object.values(Games).map((Game) => [Game, FormatLink(ActiveLinks.find((Link) => Link.Game === Game))]));
+        SendSuccess(Response, { DiscordUserId, HasActiveLink: ActiveLinks.length > 0, ActiveLinks: LinksByGame });
     });
 
     LinkRouter.get('/links/habbo/:HotelCode/:HabboUniqueId', async (Request, Response) => {
@@ -37,17 +40,21 @@ export function CreateHabboLinkRoutes({ Services }) {
 
     LinkRouter.post('/links/discord/:DiscordUserId/unlink', async (Request, Response) => {
         const DiscordUserId = RequireDiscordUserId(Request.params.DiscordUserId);
-        const Body = RequireOnlyFields(Request.body, ['ExpectedLinkId', 'Reason']);
+        const Body = RequireOnlyFields(Request.body, ['Game', 'ExpectedLinkId', 'Reason']);
+        const Game = OptionalGame(Body.Game);
         const ExpectedLinkId = OptionalLinkId(Body.ExpectedLinkId);
         const Reason = OptionalReason(Body.Reason);
 
-        const Result = await HabboLinkService.UnlinkDiscordUser({ DiscordUserId, ExpectedLinkId, Source: 'INTERNAL_API', Reason });
+        const Result = await HabboLinkService.UnlinkDiscordUser({ DiscordUserId, Game, ExpectedLinkId, Source: 'INTERNAL_API', Reason });
 
         if (Result.Outcome === LinkOutcomes.NoActiveLink) {
-            throw new ApiError(404, 'NO_ACTIVE_LINK', 'This Discord user has no active Habbo link.');
+            throw new ApiError(404, 'NO_ACTIVE_LINK', 'This Discord user has no matching active link.');
         }
         if (Result.Outcome === LinkOutcomes.LinkChanged) {
             throw new ApiError(409, 'LINK_CHANGED', 'The active link does not match ExpectedLinkId.');
+        }
+        if (Result.Outcome === LinkOutcomes.GameRequired) {
+            throw new ApiError(400, 'GAME_REQUIRED', 'This user has a Habbo and a Habbo Origins link. Pass Game (HABBO or ORIGINS) or ExpectedLinkId.');
         }
 
         // Apply the role removal / audit message in the background (they retry on failure).

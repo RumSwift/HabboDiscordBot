@@ -2,6 +2,9 @@ const Prefix = 'HV';
 const Separator = ':';
 const MaxCustomIdLength = 100; // Discord limit
 
+// Owner for components anyone who can see the message may use (e.g. the reply menu on a /dmmod card).
+export const AnyUser = '0';
+
 export function BuildCustomId(Action, OwnerDiscordUserId, ...Arguments) {
     const CustomId = [Prefix, Action, OwnerDiscordUserId, ...Arguments.map(String)].join(Separator);
     if (CustomId.length > MaxCustomIdLength) {

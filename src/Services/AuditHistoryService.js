@@ -5,8 +5,12 @@ export class AuditHistoryService {
         this.NotificationRepository = NotificationRepository;
     }
 
-    GetActiveLinkForDiscordUser(DiscordUserId) {
-        return this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId);
+    GetActiveLinkForDiscordUser(DiscordUserId, Game) {
+        return this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, Game);
+    }
+
+    GetActiveLinksForDiscordUser(DiscordUserId) {
+        return this.LinkRepository.FindActiveLinksByDiscordUserId(DiscordUserId);
     }
 
     HasActiveLink(DiscordUserId) {
@@ -26,11 +30,11 @@ export class AuditHistoryService {
     }
 
     async GetUserLinkSummary(DiscordUserId) {
-        const [ActiveLink, EventSummary] = await Promise.all([
-            this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId),
+        const [ActiveLinks, EventSummary] = await Promise.all([
+            this.LinkRepository.FindActiveLinksByDiscordUserId(DiscordUserId),
             this.AuditRepository.GetEventSummaryForDiscordUser(DiscordUserId),
         ]);
-        return { DiscordUserId, HasActiveLink: Boolean(ActiveLink), ActiveLink, ...EventSummary };
+        return { DiscordUserId, HasActiveLink: ActiveLinks.length > 0, ActiveLinks, ...EventSummary };
     }
 
     async GetLinkedAccountsForDiscordUser(DiscordUserId) {
@@ -44,6 +48,7 @@ export class AuditHistoryService {
             if (!Account) {
                 Account = {
                     HotelCode: Link.HotelCode,
+                    Game: Link.Game,
                     HabboUniqueId: Link.HabboUniqueId,
                     HabboUsername: Link.HabboUsername,
                     LinkCount: 0,

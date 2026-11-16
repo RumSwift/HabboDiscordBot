@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown, time, TimestampStyles } from 'discord.js';
 import { BuildCustomId } from '../Utils/CustomId.js';
-import { GetHotel } from '../Utils/HotelConfiguration.js';
-import { Colours, StartAgainRow, Thumbnails, VerifyCommandText, View } from './ComponentStyles.js';
+import { FormatHotel, GameLabels, GetHotel } from '../Utils/HotelConfiguration.js';
+import { Colours, SelfDestructNote, StartAgainRow, Thumbnails, VerifyCommandText, View } from './ComponentStyles.js';
 
 export function FormatRemainingTime(RemainingMs) {
     const TotalSeconds = Math.max(0, Math.ceil(RemainingMs / 1000));
@@ -25,10 +25,11 @@ export function BuildVerificationView({ OwnerDiscordUserId, ChallengeId, Verific
     const ExpiresDate = new Date(ExpiresTimestamp);
     const RemainingMs = ExpiresDate.getTime() - Now.getTime();
 
+    const GameLabel = GameLabels[GetHotel(HotelCode).Game];
     const Embed = new EmbedBuilder()
-        .setTitle('Verify Habbo Account Ownership')
+        .setTitle(`Verify ${GameLabel} Account Ownership`)
         .setDescription(
-            'To prove that you own this Habbo account, temporarily change your Habbo motto to the verification code shown below.\n\n' +
+            `To prove that you own this ${GameLabel} account, temporarily change your ${GameLabel} motto to the verification code shown below.\n\n` +
                 'Once you have updated your motto, return here and click **Check Motto**.\n\n' +
                 'Your code is unique to this verification attempt and expires in five minutes. Do not share it with anyone.',
         )
@@ -36,7 +37,7 @@ export function BuildVerificationView({ OwnerDiscordUserId, ChallengeId, Verific
         .setThumbnail(Notice?.Thumbnail ?? Thumbnails.Verification)
         .addFields(
             { name: 'Your Verification Code', value: `\`\`\`\n${VerificationCode}\n\`\`\`` },
-            { name: 'Habbo Account', value: `${HabboUsername} (${HotelCode})`, inline: true },
+            { name: `${GameLabel} Account`, value: `${HabboUsername} (${FormatHotel(HotelCode)})`, inline: true },
             { name: 'Time Remaining', value: `**${FormatRemainingTime(RemainingMs)}** (expires ${time(ExpiresDate, TimestampStyles.RelativeTime)})`, inline: true },
         );
 
@@ -117,7 +118,7 @@ export function BuildAlreadyLinkedElsewhereView({ OwnerDiscordUserId }) {
 export function BuildAlreadyLinkedToYouView({ OwnerDiscordUserId, HabboUsername, HotelCode }) {
     const Embed = new EmbedBuilder()
         .setTitle('Already Linked')
-        .setDescription(`**${HabboUsername}** (${HotelCode}) is already linked to your Discord account. There is nothing more to do.`)
+        .setDescription(`**${HabboUsername}** (${FormatHotel(HotelCode)}) is already linked to your Discord account. There is nothing more to do.`)
         .setColor(Colours.Success);
     return View(Embed, [StartAgainRow(OwnerDiscordUserId)]);
 }
@@ -142,7 +143,8 @@ export function BuildVerificationCancelledView() {
     const Embed = new EmbedBuilder()
         .setTitle('Verification Cancelled')
         .setDescription('Okay, the verification process has been cancelled.')
-        .setColor(Colours.Neutral);
+        .setColor(Colours.Neutral)
+        .setFooter({ text: SelfDestructNote });
     return View(Embed, []);
 }
 
@@ -155,23 +157,25 @@ export function BuildChallengeClosedView({ OwnerDiscordUserId }) {
 }
 
 export function BuildVerifiedView({ HabboUsername, HotelCode }) {
+    const GameLabel = GameLabels[GetHotel(HotelCode).Game];
     const Embed = new EmbedBuilder()
-        .setTitle('Habbo Account Verified!')
+        .setTitle(`${GameLabel} Account Verified!`)
         .setDescription(
-            'Your Habbo account has been successfully linked to your Discord account.\n\n' +
-                `**Habbo Username:** ${HabboUsername}\n\n` +
-                `**Hotel:** ${HotelCode}\n\n` +
+            `Your ${GameLabel} account has been successfully linked to your Discord account.\n\n` +
+                `**Username:** ${HabboUsername}\n\n` +
+                `**Hotel:** ${FormatHotel(HotelCode)}\n\n` +
                 'You can now use the features available to verified members.\n\n' +
-                '*You can change your Habbo motto back now.*',
+                `*You can change your ${GameLabel} motto back now.*`,
         )
         .setColor(Colours.Success)
-        .setThumbnail(Thumbnails.Verified);
+        .setThumbnail(Thumbnails.Verified)
+        .setFooter({ text: SelfDestructNote });
     return View(Embed, []);
 }
 
 export function BuildLookupLoadingView({ HabboUsername, HotelCode }) {
     const Embed = new EmbedBuilder()
-        .setTitle('⏳ Looking Up Your Habbo Account')
+        .setTitle(`⏳ Looking Up Your ${GameLabels[GetHotel(HotelCode).Game]} Account`)
         .setDescription(`Searching for **${escapeMarkdown(HabboUsername)}** on **${GetHotel(HotelCode).Hostname}**...\n\nThis can take a few seconds. Please wait.`)
         .setColor(Colours.Neutral);
     return View(Embed, []);

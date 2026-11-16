@@ -6,33 +6,37 @@ export class DiscordRoleService {
         this.Logger = Logger;
     }
 
-    async AddRole(DiscordUserId, RoleId, Reason) {
-        const { Member } = await this.ResolveMemberAndRole(DiscordUserId, RoleId);
+    async AddRole(DiscordUserId, RoleId, Reason, GuildId = null) {
+        const { Member } = await this.ResolveMemberAndRole(DiscordUserId, RoleId, GuildId);
         if (!Member.roles.cache.has(RoleId)) {
             await Member.roles.add(RoleId, Reason);
         }
     }
 
-    async RemoveRole(DiscordUserId, RoleId, Reason) {
-        const { Member } = await this.ResolveMemberAndRole(DiscordUserId, RoleId);
+    async RemoveRole(DiscordUserId, RoleId, Reason, GuildId = null) {
+        const { Member } = await this.ResolveMemberAndRole(DiscordUserId, RoleId, GuildId);
         if (Member.roles.cache.has(RoleId)) {
             await Member.roles.remove(RoleId, Reason);
         }
     }
 
-    async ResolveMemberAndRole(DiscordUserId, RoleId) {
+    async ResolveMemberAndRole(DiscordUserId, RoleId, GuildId) {
         if (!this.Client?.isReady?.()) {
             // Temporary: the bot is still connecting. The operation will be retried.
             throw new Error('Discord client is not ready.');
         }
 
-        // Role IDs are globally unique, so the role tells us which server to use.
-        const Guild = this.Client.guilds.cache.find((CandidateGuild) => CandidateGuild.roles.cache.has(RoleId));
+        // Operations queued before servers were configured have no GuildId; the role tells us the server.
+        const Guild = GuildId
+            ? this.Client.guilds.cache.get(GuildId)
+            : this.Client.guilds.cache.find((CandidateGuild) => CandidateGuild.roles.cache.has(RoleId));
         if (!Guild) {
-            throw new PermanentError(`Role ${RoleId} was not found in any server the bot is in. Check the HABBO_ROLE_* configuration.`);
+            throw new PermanentError(GuildId ? `The bot is not in server ${GuildId}.` : `Role ${RoleId} was not found in any server the bot is in.`);
+        }
+        if (!Guild.roles.cache.has(RoleId)) {
+            throw new PermanentError(`Role ${RoleId} does not exist in server ${Guild.id}. Check the GuildRoles table.`);
         }
 
-        // Fetching a single member by ID does not require the privileged members intent.
         const Member = await Guild.members.fetch(DiscordUserId);
         return { Guild, Member };
     }

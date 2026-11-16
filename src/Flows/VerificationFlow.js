@@ -1,5 +1,5 @@
 import { BuildDashboardView } from '../Components/DashboardComponents.js';
-import { BuildHotelSelectionView } from '../Components/HotelSelectionComponents.js';
+import { BuildGameSelectionView, BuildHotelSelectionView } from '../Components/HotelSelectionComponents.js';
 import { BuildErrorView, Thumbnails } from '../Components/ComponentStyles.js';
 import {
     BuildAccountNotFoundView,
@@ -20,25 +20,34 @@ import {
 } from '../Components/VerificationComponents.js';
 import { BuildHabboUsernameModal, UsernameInputId } from '../Modals/HabboUsernameModal.js';
 import { VerificationOutcomes } from '../Services/VerificationService.js';
-import { IsValidHotelCode } from '../Utils/HotelConfiguration.js';
-import { ApplyQueuedDiscordChanges, ShowLoading } from './FlowHelpers.js';
+import { IsValidGame, IsValidHotelCode } from '../Utils/HotelConfiguration.js';
+import { ApplyQueuedDiscordChanges, ScheduleSelfDestruct, ShowLoading } from './FlowHelpers.js';
 
 export async function ExecuteVerifyHabboCommand(Interaction, Context) {
-    const ActiveLink = await Context.Services.AuditHistoryService.GetActiveLinkForDiscordUser(Interaction.user.id);
-    await Interaction.editReply(BuildDashboardView({ OwnerDiscordUserId: Interaction.user.id, ActiveLink }));
+    const ActiveLinks = await Context.Services.AuditHistoryService.GetActiveLinksForDiscordUser(Interaction.user.id);
+    await Interaction.editReply(BuildDashboardView({ OwnerDiscordUserId: Interaction.user.id, ActiveLinks }));
 }
 
 export async function HandleDashboard(Interaction, Context) {
     await ShowLoading(Interaction, 'Loading...');
     Context.Services.SessionService.ClearSession(Interaction.user.id);
-    const ActiveLink = await Context.Services.AuditHistoryService.GetActiveLinkForDiscordUser(Interaction.user.id);
-    await Interaction.editReply(BuildDashboardView({ OwnerDiscordUserId: Interaction.user.id, ActiveLink }));
+    const ActiveLinks = await Context.Services.AuditHistoryService.GetActiveLinksForDiscordUser(Interaction.user.id);
+    await Interaction.editReply(BuildDashboardView({ OwnerDiscordUserId: Interaction.user.id, ActiveLinks }));
 }
 
-export async function HandleLink(Interaction, Context) {
+export async function HandleLink(Interaction) {
+    await Interaction.update(BuildGameSelectionView({ OwnerDiscordUserId: Interaction.user.id }));
+}
+
+export async function HandleSelectGame(Interaction, Context, { Arguments }) {
+    const Game = Arguments[0];
+    if (!IsValidGame(Game)) {
+        await Interaction.update(BuildErrorView(Interaction.user.id, 'That game is not supported.'));
+        return;
+    }
     await ShowLoading(Interaction, 'Loading...');
-    const ActiveLink = await Context.Services.AuditHistoryService.GetActiveLinkForDiscordUser(Interaction.user.id);
-    await Interaction.editReply(BuildHotelSelectionView({ OwnerDiscordUserId: Interaction.user.id, ActiveLink }));
+    const ActiveLink = await Context.Services.AuditHistoryService.GetActiveLinkForDiscordUser(Interaction.user.id, Game);
+    await Interaction.editReply(BuildHotelSelectionView({ OwnerDiscordUserId: Interaction.user.id, Game, ActiveLink }));
 }
 
 export async function HandleSelectHotel(Interaction, Context, { Arguments }) {
@@ -143,6 +152,7 @@ export async function HandleCheckMotto(Interaction, Context, { Arguments }) {
             SessionService.ClearSession(DiscordUserId);
             await ApplyQueuedDiscordChanges(Context, DiscordUserId);
             await Interaction.editReply(BuildVerifiedView({ HabboUsername: Result.Link.HabboUsername, HotelCode: Result.Link.HotelCode }));
+            ScheduleSelfDestruct(Interaction, Context.Logger);
             return;
 
         case VerificationOutcomes.Mismatch:
@@ -184,6 +194,7 @@ export async function HandleCheckMotto(Interaction, Context, { Arguments }) {
             if (Result.Status === 'COMPLETED') {
                 // A late duplicate click after success: keep showing the success message.
                 await Interaction.editReply(BuildVerifiedView({ HabboUsername: Result.Challenge.HabboUsername, HotelCode: Result.Challenge.HotelCode }));
+                ScheduleSelfDestruct(Interaction, Context.Logger);
             } else {
                 await Interaction.editReply(BuildChallengeClosedView({ OwnerDiscordUserId: DiscordUserId }));
             }
@@ -205,7 +216,7 @@ export async function HandleCancel(Interaction, Context, { Arguments }) {
     await VerificationService.CancelChallenge({ DiscordUserId, ChallengeId });
 
     await Interaction.editReply(BuildVerificationCancelledView());
-    SessionService.ScheduleMessageCleanup(Interaction);
+    ScheduleSelfDestruct(Interaction, Context.Logger);
 }
 
 async function ShowVerificationScreen(Interaction, Context, Challenge, Notice) {

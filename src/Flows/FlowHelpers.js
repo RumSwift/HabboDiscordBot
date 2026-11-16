@@ -1,4 +1,11 @@
 import { ComponentType, MessageFlags } from 'discord.js';
+import { SelfDestructSeconds } from '../Components/ComponentStyles.js';
+
+export function ScheduleSelfDestruct(Interaction, Logger, DelayMs = SelfDestructSeconds * 1000) {
+    setTimeout(() => {
+        Interaction.deleteReply().catch((DeleteError) => Logger?.Debug('Could not delete self-destructing reply', { Error: DeleteError }));
+    }, DelayMs).unref?.();
+}
 
 export async function ShowLoading(Interaction, LoadingLabel = 'Loading...') {
     const MessageComponents = Interaction.message?.components ?? [];
