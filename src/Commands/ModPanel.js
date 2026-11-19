@@ -1,5 +1,5 @@
 import { InteractionContextType, SlashCommandBuilder } from 'discord.js';
-import { ExecuteModPanelCommand, ModPanelHandlers, ModPanelPermission } from './ModPanel/Panel.js';
+import { ExecuteModPanelCommand, ModPanelHandlers, ModPanelModalHandlers, ModPanelPermission } from './ModPanel/Panel.js';
 
 export default {
     Data: new SlashCommandBuilder()
@@ -11,4 +11,5 @@ export default {
 
     Execute: ExecuteModPanelCommand,
     ComponentHandlers: ModPanelHandlers,
+    ModalHandlers: ModPanelModalHandlers,
 };

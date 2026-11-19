@@ -3,6 +3,7 @@ import { BuildModPanelResultView } from '../../Components/ModPanelComponents.js'
 import { ScheduleSelfDestruct } from '../../Flows/FlowHelpers.js';
 import { SanctionTypes } from '../../Repositories/ModSanctionRepository.js';
 import { EmergencyMuteReason, FormatBanEnd } from '../../Services/Logging/ModActionLogService.js';
+import { ClosePanel } from './OpenPanels.js';
 
 export const EmergencyMuteMs = 24 * 60 * 60 * 1000;
 
@@ -60,5 +61,6 @@ export async function HandleEmergencyMute(Interaction, Context, { TargetId }) {
             `**${EmergencyMuteReason}**\n\n**Ends:** ${FormatBanEnd(EndsTimestamp)}\nThe user was not notified.${LogUrl ? `\n\n**Log:** ${LogUrl}` : ''}`,
         ),
     );
+    ClosePanel(Interaction, TargetId, Context.Logger);
     ScheduleSelfDestruct(Interaction, Context.Logger);
 }

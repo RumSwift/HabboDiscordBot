@@ -8,8 +8,9 @@ const EventsDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), 
 export function CreateDiscordClient() {
     // MessageContent is privileged: without it deleted messages are logged with no text.
     // DirectMessages + the Channel partial let the bot receive DMs for mod mail.
+    // GuildModeration tells the bot when someone is unbanned, for the ban log.
     return new Client({
-        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildModeration],
         partials: [Partials.Channel],
     });
 }

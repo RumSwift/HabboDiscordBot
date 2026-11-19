@@ -11,6 +11,7 @@ import { HabboLinkAuditRepository } from './Repositories/HabboLinkAuditRepositor
 import { AuditNotificationRepository } from './Repositories/AuditNotificationRepository.js';
 import { RoleOperationRepository } from './Repositories/RoleOperationRepository.js';
 import { GuildConfigurationRepository } from './Repositories/GuildConfigurationRepository.js';
+import { ModNoteRepository } from './Repositories/ModNoteRepository.js';
 import { ModSanctionRepository } from './Repositories/ModSanctionRepository.js';
 import { MemberRoleSnapshotRepository } from './Repositories/MemberRoleSnapshotRepository.js';
 import { DmModRepository } from './Repositories/DmModRepository.js';
@@ -158,6 +159,7 @@ export class Application {
             ModMailRepository: new ModMailRepository(Pool),
             ModMailBanRepository: new ModMailBanRepository(Pool),
             ModSanctionRepository: new ModSanctionRepository(Pool),
+            ModNoteRepository: new ModNoteRepository(Pool),
             ModActionLogService: new ModActionLogService({ GuildLogService: GuildLogs }),
             MessageDeleteLogService: new MessageDeleteLogService({ GuildLogService: GuildLogs }),
             MessageEditLogService: new MessageEditLogService({ GuildLogService: GuildLogs }),

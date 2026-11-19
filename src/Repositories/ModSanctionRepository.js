@@ -5,6 +5,7 @@ export const SanctionTypes = Object.freeze({
     InappropriateProfile: 'INAPPROPRIATE_PROFILE',
     Racism: 'RACISM',
     Scam: 'SCAM',
+    Custom: 'CUSTOM',
 });
 
 export class ModSanctionRepository {
@@ -22,15 +23,26 @@ export class ModSanctionRepository {
         return Result.affectedRows > 0 ? String(Result.insertId) : null;
     }
 
-    // The member's history in this server, newest first.
+    // The member's history in this server, newest first. Forgiven sanctions are left out, so they no longer count.
     async GetForUser(GuildId, DiscordUserId) {
         const [Rows] = await this.Pool.query(
             `SELECT s.SanctionId, s.SanctionType, s.PrivateReason, s.PublicReason, s.Punishment, s.MessageLink, s.SanctionLink, s.ModeratorDiscordUserId, s.CreatedTimestamp
              FROM ModSanctions s JOIN Guilds g ON g.GuildUuid = s.GuildUuid
-             WHERE g.GuildId = ? AND s.DiscordUserId = ?
+             WHERE g.GuildId = ? AND s.DiscordUserId = ? AND s.ForgivenTimestamp IS NULL
              ORDER BY s.CreatedTimestamp DESC, s.SanctionId DESC`,
             [GuildId, DiscordUserId],
         );
         return Rows;
+    }
+
+    // Forgives one sanction in this server. False when it is not there or was already forgiven.
+    async Forgive({ GuildId, SanctionId, ModeratorDiscordUserId, Now = new Date() }) {
+        const [Result] = await this.Pool.query(
+            `UPDATE ModSanctions s JOIN Guilds g ON g.GuildUuid = s.GuildUuid
+             SET s.ForgivenTimestamp = ?, s.ForgivenByDiscordUserId = ?
+             WHERE s.SanctionId = ? AND g.GuildId = ? AND s.ForgivenTimestamp IS NULL`,
+            [Now, ModeratorDiscordUserId, SanctionId, GuildId],
+        );
+        return Result.affectedRows > 0;
     }
 }

@@ -14,6 +14,9 @@ export const LogChannelTypes = Object.freeze({
     DmMod: 'DMMOD',
     ModMailForum: 'MODMAIL_FORUM',
     ModActions: 'MOD_ACTIONS',
+    BanLog: 'BAN_LOG',
+    DirectMessages: 'DIRECT_MESSAGES',
+    Notes: 'NOTES',
 });
 
 // Role pinged on /dmmod messages (GuildRoles.RoleType).
