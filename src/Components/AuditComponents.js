@@ -3,9 +3,8 @@ import { BuildCustomId } from '../Utils/CustomId.js';
 import { FormatHotel, FormatHotelEmoji, GameLabels, Games } from '../Utils/HotelConfiguration.js';
 import { Colours, Emojis, FormatEmoji, View } from './ComponentStyles.js';
 
-const ActiveIcon = FormatEmoji(Emojis.Plus);
-const InactiveIcon = FormatEmoji(Emojis.Minus);
-const NeutralIcon = FormatEmoji(Emojis.Neutral);
+// Read when used, because the emoji IDs are only known once the bot has started.
+const Icon = { get Active() { return FormatEmoji(Emojis.Plus); }, get Inactive() { return FormatEmoji(Emojis.Minus); }, get Neutral() { return FormatEmoji(Emojis.Neutral); } };
 
 export const AuditHistoryPageSize = 20;
 
@@ -24,8 +23,8 @@ export function BuildAuditSummaryView({ OwnerDiscordUserId, TargetDiscordUserId,
         const ActiveLink = Summary.ActiveLinks.find((Link) => Link.Game === Game);
         Lines.push(
             ActiveLink
-                ? `${ActiveIcon} ${GameLabels[Game]}: ${FormatAccountName(ActiveLink.HabboUsername, ActiveLink.HotelCode)} since ${time(new Date(ActiveLink.LinkedTimestamp), TimestampStyles.LongDateTime)}`
-                : `${NeutralIcon} ${GameLabels[Game]}: Not currently linked`,
+                ? `${Icon.Active} ${GameLabels[Game]}: ${FormatAccountName(ActiveLink.HabboUsername, ActiveLink.HotelCode)} since ${time(new Date(ActiveLink.LinkedTimestamp), TimestampStyles.LongDateTime)}`
+                : `${Icon.Neutral} ${GameLabels[Game]}: Not currently linked`,
         );
     }
     Lines.push('');
@@ -39,7 +38,7 @@ export function BuildAuditSummaryView({ OwnerDiscordUserId, TargetDiscordUserId,
             ? 'Active'
             : `Unlinked ${time(new Date(Account.LastUnlinkedTimestamp), TimestampStyles.ShortDate)}`;
         Lines.push(
-            `${Account.IsActive ? ActiveIcon : InactiveIcon} ${FormatAccountName(Account.HabboUsername, Account.HotelCode)}\n` +
+            `${Account.IsActive ? Icon.Active : Icon.Inactive} ${FormatAccountName(Account.HabboUsername, Account.HotelCode)}\n` +
                 `   Linked ${Account.LinkCount}× · first ${time(new Date(Account.FirstLinkedTimestamp), TimestampStyles.ShortDate)}` +
                 ` · last ${time(new Date(Account.LastLinkedTimestamp), TimestampStyles.ShortDate)} · ${Status}`,
         );
@@ -77,7 +76,7 @@ export function FormatAuditEventLine(Event) {
         Notes.push(`via ${Event.Details.Source}`);
     }
     const NoteText = Notes.length > 0 ? ` · *${Notes.join(', ')}*` : '';
-    return `${IsLinked ? ActiveIcon : InactiveIcon} **${Event.ActionType}** ${FormatAccountName(Event.HabboUsername, Event.HotelCode)} · ${time(new Date(Event.EventTimestamp), TimestampStyles.ShortDateTime)}${NoteText}`;
+    return `${IsLinked ? Icon.Active : Icon.Inactive} **${Event.ActionType}** ${FormatAccountName(Event.HabboUsername, Event.HotelCode)} · ${time(new Date(Event.EventTimestamp), TimestampStyles.ShortDateTime)}${NoteText}`;
 }
 
 export function BuildAuditHistoryView({ OwnerDiscordUserId, TargetDiscordUserId, Events, Page, TotalPages }) {

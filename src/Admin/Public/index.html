@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>HabboVerifyBot Setup</title>
+    <script src="admin.js" defer></script>
+</head>
+<body>
+    <h1>HabboVerifyBot setup</h1>
+    <p id="BotStatus">Servers, roles and log channels.</p>
+    <p><button type="button" id="SignOut" hidden>Sign out</button></p>
+
+    <form id="SignInForm" hidden>
+        <h2>Sign in</h2>
+        <p>Use the ADMIN_PASSWORD from the bot's .env file.</p>
+        <p>
+            <label>Password: <input type="password" id="Password" autocomplete="current-password" required></label>
+            <button type="submit">Sign in</button>
+        </p>
+        <p id="SignInMessage" role="alert"></p>
+    </form>
+
+    <div id="App" hidden>
+        <p>Enter IDs by hand. To copy one, turn on Developer Mode in Discord (Settings, Advanced), then right-click a server, channel or role and choose Copy ID.</p>
+        <div id="Servers"></div>
+    </div>
+</body>
+</html>

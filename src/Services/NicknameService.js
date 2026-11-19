@@ -30,13 +30,14 @@ export class NicknameService {
         await this.Task.Stop();
     }
 
-    // Each server shows the account for its own game; servers not in the Guilds table are left alone.
+    // Each server shows the account for its own game. Servers not in the Guilds table, or with nickname enforcement
+    // switched off on the admin page, are left alone.
     async SyncUser(DiscordUserId, { UnlinkedLink = null } = {}) {
         if (!this.Client?.isReady?.()) {
             return;
         }
         const [GuildTypes, ActiveLinks] = await Promise.all([
-            this.GuildConfigurationRepository.GetGuildTypesById(),
+            this.GuildConfigurationRepository.GetNicknameGuildTypesById(),
             this.LinkRepository.FindActiveLinksByDiscordUserId(DiscordUserId),
         ]);
         for (const Guild of this.Client.guilds.cache.values()) {
@@ -57,7 +58,7 @@ export class NicknameService {
             return;
         }
         const Guild = await this.GuildConfigurationRepository.FindGuildByGuildId(Member.guild?.id);
-        if (!Guild) {
+        if (!Guild?.EnforceNicknames) {
             return;
         }
         const ActiveLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(Member.id, Guild.GuildType);
@@ -68,7 +69,7 @@ export class NicknameService {
         if (!this.Client?.isReady?.()) {
             return;
         }
-        const [GuildTypes, ActiveLinks] = await Promise.all([this.GuildConfigurationRepository.GetGuildTypesById(), this.LinkRepository.GetAllActiveLinks()]);
+        const [GuildTypes, ActiveLinks] = await Promise.all([this.GuildConfigurationRepository.GetNicknameGuildTypesById(), this.LinkRepository.GetAllActiveLinks()]);
         if (ActiveLinks.length === 0) {
             return;
         }

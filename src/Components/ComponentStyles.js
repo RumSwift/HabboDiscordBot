@@ -12,6 +12,7 @@ import {
     ThumbnailBuilder,
 } from 'discord.js';
 import { BuildCustomId } from '../Utils/CustomId.js';
+import { ApplicationEmoji, FormatEmoji } from '../Utils/ApplicationEmojis.js';
 
 export const Colours = Object.freeze({
     Primary: 0x5865f2,
@@ -21,19 +22,17 @@ export const Colours = Object.freeze({
     Neutral: 0x95a5a6,
 });
 
-// Application emojis (developer portal -> Emojis).
+// Custom emojis, uploaded to the bot application automatically on start (see Utils/ApplicationEmojis.js).
 export const Emojis = Object.freeze({
-    Plus: Object.freeze({ name: 'Plus', id: '1558790263084810240' }),
-    Minus: Object.freeze({ name: 'Minus', id: '1558790261600161872' }),
-    Neutral: Object.freeze({ name: 'Neutral', id: '1558791468817186837' }),
-    Deleted: Object.freeze({ name: 'NoSound', id: '1558797359079497829' }),
-    ArrowLeft: Object.freeze({ name: 'ArrowLeft', id: '1558786179485278310' }),
-    ArrowRight: Object.freeze({ name: 'ArrowRight', id: '1558786180605026346' }),
+    Plus: ApplicationEmoji('Plus', '1558790263084810240', '➕'),
+    Minus: ApplicationEmoji('Minus', '1558790261600161872', '➖'),
+    Neutral: ApplicationEmoji('Neutral', '1558791468817186837', '⚪'),
+    Deleted: ApplicationEmoji('NoSound', '1558797359079497829', '🗑️'),
+    ArrowLeft: ApplicationEmoji('ArrowLeft', '1558786179485278310', '⬅️'),
+    ArrowRight: ApplicationEmoji('ArrowRight', '1558786180605026346', '➡️'),
 });
 
-export function FormatEmoji(Emoji) {
-    return `<:${Emoji.name}:${Emoji.id}>`;
-}
+export { FormatEmoji };
 
 const FrankImageBaseUrl = 'https://files.habboemotion.com/resources/images/frank';
 export const Thumbnails = Object.freeze({

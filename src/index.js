@@ -20,7 +20,7 @@ async function Main() {
 
     // Secret values are masked even inside third-party error messages.
     SetLogLevel(Config.LogLevel);
-    RegisterSecretValues([Config.Database.User, Config.Database.Password, Config.Discord.Token, Config.Api.InternalApiKey, Config.Verification.CodeSecret]);
+    RegisterSecretValues([Config.Database.User, Config.Database.Password, Config.Discord.Token, Config.Api.InternalApiKey, Config.Verification.CodeSecret, Config.Admin.Password].filter(Boolean));
 
     RunningApplication = new Application({ Config, Logger });
     try {

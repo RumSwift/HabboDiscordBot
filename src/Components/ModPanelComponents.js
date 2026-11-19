@@ -401,22 +401,15 @@ export function TextInputRow(Id, Label, Style, Placeholder, MaxLength, Required 
 }
 
 // Internal reason, public reason and a message link (Verbal Warning, Community Rules Violation, Racism).
-// The link is optional unless LinkRequired (Racism needs proof).
-function BuildReasonsModal(Action, Title, OwnerId, TargetId, { LinkRequired = false } = {}) {
+// The link to the message or logs is always optional.
+function BuildReasonsModal(Action, Title, OwnerId, TargetId) {
     return new ModalBuilder()
         .setCustomId(BuildCustomId(Action, OwnerId, TargetId))
         .setTitle(Title)
         .addComponents(
             TextInputRow(ReasonInputs.PrivateReason, 'INTERNAL REASON', TextInputStyle.Paragraph, 'Explanation for the moderation team. Only shared in Mod Actions.', 800),
             TextInputRow(ReasonInputs.PublicReason, 'PUBLIC REASON', TextInputStyle.Paragraph, 'Reason sent to the user. Keep it short, one paragraph at most.', 500),
-            TextInputRow(
-                ReasonInputs.MessageLink,
-                LinkRequired ? 'MESSAGE LINK (PROOF)' : 'MESSAGE LINK (OPTIONAL)',
-                TextInputStyle.Short,
-                'Link to the message(s) or logs as proof. If deleted, use the link from the logs.',
-                500,
-                LinkRequired,
-            ),
+            TextInputRow(ReasonInputs.MessageLink, 'MESSAGE LINK (OPTIONAL)', TextInputStyle.Short, 'Link to the message(s) or logs as proof. If deleted, use the link from the logs.', 500, false),
         );
 }
 
@@ -429,7 +422,7 @@ export function BuildCommunityRulesModal(OwnerId, TargetId) {
 }
 
 export function BuildRacismModal(OwnerId, TargetId) {
-    return BuildReasonsModal(ModPanelActions.RacismForm, 'Racism Violation', OwnerId, TargetId, { LinkRequired: true });
+    return BuildReasonsModal(ModPanelActions.RacismForm, 'Racism Violation', OwnerId, TargetId);
 }
 
 export function BuildProfileModal(OwnerId, TargetId) {

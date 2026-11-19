@@ -11,6 +11,7 @@ export const LogChannelTypes = Object.freeze({
     MemberJoin: 'MEMBER_JOIN',
     MemberLeave: 'MEMBER_LEAVE',
     Say: 'SAY',
+    SayEmbed: 'SAY_EMBED',
     DmMod: 'DMMOD',
     ModMailForum: 'MODMAIL_FORUM',
     ModActions: 'MOD_ACTIONS',
@@ -30,12 +31,17 @@ export const ExclusionOutcomes = Object.freeze({
     NotExcluded: 'NOT_EXCLUDED',
 });
 
+// TINYINT(1) comes back as 0/1.
+function ToGuild(Row) {
+    return { ...Row, EnforceNicknames: Boolean(Number(Row.EnforceNicknames)) };
+}
+
 export class GuildConfigurationRepository {
     constructor(Pool) {
         this.Pool = Pool;
     }
 
-    // Fills the tables from .env only while Guilds is empty; after that the tables are edited directly.
+    // Fills the tables only while Guilds is empty (used by the tests). Real servers are set up on the admin page.
     async SeedIfEmpty(GuildSeed, { Logger, Now = new Date() } = {}) {
         return WithTransaction(this.Pool, async (Connection) => {
             const [Existing] = await Connection.query('SELECT COUNT(*) AS GuildCount FROM Guilds FOR UPDATE');
@@ -43,7 +49,7 @@ export class GuildConfigurationRepository {
                 return false;
             }
             if (GuildSeed.length === 0) {
-                Logger?.Warn('The Guilds table is empty. Set HABBO_GUILD_ID / ORIGINS_GUILD_ID to seed it, or add rows by hand.');
+                Logger?.Warn('The Guilds table is empty. Add your servers on the admin page (/admin).');
                 return false;
             }
 
@@ -76,8 +82,14 @@ export class GuildConfigurationRepository {
     }
 
     async GetGuilds(Executor = this.Pool) {
-        const [Rows] = await Executor.query('SELECT GuildUuid, GuildType, Name, GuildId FROM Guilds ORDER BY Name');
-        return Rows;
+        const [Rows] = await Executor.query('SELECT GuildUuid, GuildType, Name, GuildId, EnforceNicknames FROM Guilds ORDER BY Name');
+        return Rows.map(ToGuild);
+    }
+
+    // Servers where verified members' nicknames are enforced, as GuildId -> GuildType.
+    async GetNicknameGuildTypesById(Executor = this.Pool) {
+        const Guilds = await this.GetGuilds(Executor);
+        return new Map(Guilds.filter((Guild) => Guild.EnforceNicknames).map((Guild) => [Guild.GuildId, Guild.GuildType]));
     }
 
     async GetGuildTypesById(Executor = this.Pool) {
@@ -86,8 +98,8 @@ export class GuildConfigurationRepository {
     }
 
     async FindGuildByGuildId(GuildId, Executor = this.Pool) {
-        const [Rows] = await Executor.query('SELECT GuildUuid, GuildType, Name, GuildId FROM Guilds WHERE GuildId = ?', [GuildId]);
-        return Rows[0] ?? null;
+        const [Rows] = await Executor.query('SELECT GuildUuid, GuildType, Name, GuildId, EnforceNicknames FROM Guilds WHERE GuildId = ?', [GuildId]);
+        return Rows[0] ? ToGuild(Rows[0]) : null;
     }
 
     async GetRoles(GuildType, RoleType, Executor = this.Pool) {
@@ -177,6 +189,79 @@ export class GuildConfigurationRepository {
             }
             throw InsertError;
         }
+    }
+
+    // Everything the admin page shows: each configured server with its roles, log channels and log exclusions.
+    async GetConfiguration() {
+        const [Guilds, [Roles], [Channels], [Exclusions]] = await Promise.all([
+            this.GetGuilds(),
+            this.Pool.query('SELECT GuildUuid, RoleType, RoleId FROM GuildRoles'),
+            this.Pool.query('SELECT GuildUuid, ChannelType, ChannelId FROM GuildLogChannels'),
+            this.Pool.query('SELECT GuildUuid, ChannelId, AddedByDiscordUserId, CreatedTimestamp FROM GuildLogExclusions ORDER BY CreatedTimestamp'),
+        ]);
+        const For = (Rows, Guild) => Rows.filter((Row) => Row.GuildUuid === Guild.GuildUuid);
+        return Guilds.map((Guild) => ({
+            ...Guild,
+            Roles: Object.fromEntries(For(Roles, Guild).map((Row) => [Row.RoleType, Row.RoleId])),
+            Channels: Object.fromEntries(For(Channels, Guild).map((Row) => [Row.ChannelType, Row.ChannelId])),
+            Exclusions: For(Exclusions, Guild).map(({ ChannelId, AddedByDiscordUserId, CreatedTimestamp }) => ({ ChannelId, AddedByDiscordUserId, CreatedTimestamp })),
+        }));
+    }
+
+    // Creates or updates the one server of a type (HABBO / ORIGINS) and replaces its roles and log channels.
+    // Roles and Channels map a type to an ID; an empty value removes that setting. Types not listed are left alone.
+    // A server is never deleted, because its moderation history refers to it; changing GuildId moves the settings to another server.
+    // EnforceNicknames is left as it is when not given (new servers default to on).
+    async SaveGuild({ GuildType, Name, GuildId, EnforceNicknames, Roles = {}, Channels = {} }, Now = new Date()) {
+        return WithTransaction(this.Pool, async (Connection) => {
+            const [Existing] = await Connection.query('SELECT GuildUuid FROM Guilds WHERE GuildType = ? ORDER BY CreatedTimestamp LIMIT 1 FOR UPDATE', [GuildType]);
+            let GuildUuid = Existing[0]?.GuildUuid;
+            if (GuildUuid) {
+                await Connection.query('UPDATE Guilds SET Name = ?, GuildId = ?, EnforceNicknames = COALESCE(?, EnforceNicknames) WHERE GuildUuid = ?', [
+                    Name,
+                    GuildId,
+                    EnforceNicknames === undefined ? null : Number(EnforceNicknames),
+                    GuildUuid,
+                ]);
+            } else {
+                GuildUuid = randomUUID();
+                await Connection.query('INSERT INTO Guilds (GuildUuid, GuildType, Name, GuildId, CreatedTimestamp, EnforceNicknames) VALUES (?, ?, ?, ?, ?, ?)', [
+                    GuildUuid,
+                    GuildType,
+                    Name,
+                    GuildId,
+                    Now,
+                    EnforceNicknames === undefined ? 1 : Number(EnforceNicknames),
+                ]);
+            }
+
+            for (const [RoleType, RoleId] of Object.entries(Roles)) {
+                if (RoleId) {
+                    await Connection.query('INSERT INTO GuildRoles (GuildUuid, RoleType, RoleId) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE RoleId = VALUES(RoleId)', [GuildUuid, RoleType, RoleId]);
+                } else {
+                    await Connection.query('DELETE FROM GuildRoles WHERE GuildUuid = ? AND RoleType = ?', [GuildUuid, RoleType]);
+                }
+            }
+            for (const [ChannelType, ChannelId] of Object.entries(Channels)) {
+                if (ChannelId) {
+                    await Connection.query('INSERT INTO GuildLogChannels (GuildUuid, ChannelType, ChannelId) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE ChannelId = VALUES(ChannelId)', [
+                        GuildUuid,
+                        ChannelType,
+                        ChannelId,
+                    ]);
+                } else {
+                    await Connection.query('DELETE FROM GuildLogChannels WHERE GuildUuid = ? AND ChannelType = ?', [GuildUuid, ChannelType]);
+                }
+            }
+
+            // Verification notifications queued before any log channel was set have no channel; send them to the Habbo log.
+            if (GuildType === Games.Habbo && Channels[LogChannelTypes.Verification]) {
+                await Connection.query("UPDATE AuditNotificationOutbox SET ChannelId = ? WHERE ChannelId IS NULL AND Status IN ('PENDING', 'PROCESSING')", [
+                    Channels[LogChannelTypes.Verification],
+                ]);
+            }
+            return GuildUuid;
+        });
     }
 
     async RemoveExcludedChannel(GuildId, ChannelId) {

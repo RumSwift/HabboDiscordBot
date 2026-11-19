@@ -5,6 +5,7 @@ import { CreateErrorHandler, NotFoundHandler } from './Middleware/ErrorHandler.j
 import { CreateHealthRoutes } from './Routes/HealthRoutes.js';
 import { CreateHabboLinkRoutes } from './Routes/HabboLinkRoutes.js';
 import { CreateVerificationRoutes } from './Routes/VerificationRoutes.js';
+import { AdminPrefix, CreateAdminRouter } from '../Admin/AdminRoutes.js';
 
 export const ApiPrefix = '/api/v1';
 
@@ -33,6 +34,9 @@ export function CreateApiApp({ Config, Services, Logger }) {
     ProtectedRouter.use(CreateHabboLinkRoutes({ Services }));
     ProtectedRouter.use(CreateVerificationRoutes({ Services }));
     App.use(ApiPrefix, ProtectedRouter);
+
+    // Admin page for servers, roles and log channels; switched off unless ADMIN_PASSWORD is set.
+    App.use(AdminPrefix, CreateAdminRouter({ Password: Config.Admin?.Password, AdminService: Services.AdminService, Logger }));
 
     App.use(NotFoundHandler);
     App.use(CreateErrorHandler(Logger));

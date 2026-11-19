@@ -7,7 +7,7 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// 😡 Racism (Moderate User menu): asks for the reasons and the proof first.
+// 😡 Racism (Moderate User menu): asks for the reasons, and optionally a link to the message or logs, first.
 export async function ShowRacismModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildRacismModal(Interaction.user.id, TargetId));
 }
@@ -115,7 +115,7 @@ export async function HandleRacismForm(Interaction, Context, { TargetId }) {
         PrivateReason,
         PublicReason,
         Punishment,
-        MessageLink,
+        MessageLink: MessageLink || null,
         SanctionLink: LogUrl,
         ModeratorDiscordUserId: Moderator.id,
     }).catch((RecordError) => Context.Logger.Error('Could not record racism violation in mod history', { Error: RecordError }));

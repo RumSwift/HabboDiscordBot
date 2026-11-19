@@ -1,5 +1,5 @@
 import { CreateDatabasePool, TestDatabaseConnection } from './Database/DatabaseConnection.js';
-import { RunMigrations } from './Database/MigrationRunner.js';
+import { CreateSchema, EnsureDatabaseExists } from './Database/Schema.js';
 import { LoadCommands, RegisterGlobalCommands } from './Handlers/CommandHandler.js';
 import { InteractionHandler } from './Handlers/InteractionHandler.js';
 import { CreateApiApp, StartApiServer, StopApiServer } from './Api/ApiServer.js';
@@ -37,12 +37,14 @@ import { MemberLeaveLogService } from './Services/Logging/MemberLeaveLogService.
 import { SayLogService } from './Services/Logging/SayLogService.js';
 import { ModActionLogService } from './Services/Logging/ModActionLogService.js';
 import { IntervalTask } from './Utils/IntervalTask.js';
+import { AdminService } from './Admin/AdminService.js';
+import { SyncApplicationEmojis } from './Utils/ApplicationEmojis.js';
 
 const DefaultDependencies = {
     CreateDatabasePool,
     TestDatabaseConnection,
-    RunMigrations,
-    SeedGuildConfiguration: (Pool, GuildSeed, Options) => new GuildConfigurationRepository(Pool).SeedIfEmpty(GuildSeed, Options),
+    EnsureDatabaseExists,
+    CreateSchema,
     LoadCommands,
     RegisterGlobalCommands,
     CreateDiscordClient,
@@ -50,6 +52,7 @@ const DefaultDependencies = {
     LoginDiscordClient,
     StartApiServer,
     StopApiServer,
+    SyncApplicationEmojis,
 };
 
 export class Application {
@@ -81,11 +84,11 @@ export class Application {
             }
 
             Logger.Info('Connecting to MariaDB...');
+            await Deps.EnsureDatabaseExists(Config.Database, { Logger });
             this.Pool = Deps.CreateDatabasePool(Config.Database);
             await Deps.TestDatabaseConnection(this.Pool);
             Logger.Info('Database connection OK.');
-            await Deps.RunMigrations(this.Pool, { Logger });
-            await Deps.SeedGuildConfiguration(this.Pool, Config.GuildSeed, { Logger });
+            await Deps.CreateSchema(this.Pool, { Logger });
 
             this.DiscordClient = Deps.CreateDiscordClient();
             this.Services = this.CreateServices();
@@ -95,6 +98,9 @@ export class Application {
 
             const ApiApp = CreateApiApp({ Config, Services: this.Services, Logger });
             this.ApiServer = await Deps.StartApiServer(ApiApp, { Host: Config.Api.Host, Port: Config.Api.Port, Logger });
+            if (Config.Admin?.Password) {
+                Logger.Info(`Admin page: http://${Config.Api.Host}:${this.ApiServer.address?.()?.port ?? Config.Api.Port}/admin/`);
+            }
 
             const Handler = new InteractionHandler({
                 Commands,
@@ -106,6 +112,7 @@ export class Application {
             await Deps.RegisterEvents(this.DiscordClient, { Logger, InteractionHandler: Handler, Services: this.Services, NicknameService: this.Services.NicknameService });
             Logger.Info('Connecting to Discord...');
             await Deps.LoginDiscordClient(this.DiscordClient, Config.Discord.Token);
+            await Deps.SyncApplicationEmojis(this.DiscordClient, { Logger });
 
             await this.CheckGuildConfiguration();
             this.StartBackgroundTasks();
@@ -155,6 +162,8 @@ export class Application {
 
         return {
             GuildConfigurationRepository: GuildConfiguration,
+            // Saving on the admin page re-runs the server check, so a newly added server's members get cached.
+            AdminService: new AdminService({ GuildConfigurationRepository: GuildConfiguration, Client: DiscordClient, Logger, OnConfigurationChanged: () => this.CheckGuildConfiguration() }),
             DmModRepository: new DmModRepository(Pool),
             ModMailRepository: new ModMailRepository(Pool),
             ModMailBanRepository: new ModMailBanRepository(Pool),
@@ -173,8 +182,8 @@ export class Application {
             VerificationService: Verification,
             SessionService: new VerificationSessionService({ VerificationService: Verification, Logger }),
             AuditHistoryService: new AuditHistoryService({ LinkRepository, AuditRepository, NotificationRepository }),
-            // null when ENFORCE_NICKNAMES=false; every caller treats it as optional.
-            NicknameService: Config.Discord.EnforceNicknames ? new NicknameService({ Client: DiscordClient, LinkRepository, GuildConfigurationRepository: GuildConfiguration, Logger, IntervalMs: Config.Discord.NicknameSweepIntervalSeconds * 1000 }) : null,
+            // Only renames members in servers with nickname enforcement switched on (admin page).
+            NicknameService: new NicknameService({ Client: DiscordClient, LinkRepository, GuildConfigurationRepository: GuildConfiguration, Logger, IntervalMs: Config.Discord.NicknameSweepIntervalSeconds * 1000 }),
             RoleRecoveryService: new RoleRecoveryService({
                 RoleOperationRepository: RoleOperationRepositoryInstance,
                 LinkRepository,
@@ -220,10 +229,7 @@ export class Application {
             Logger,
         });
 
-        this.BackgroundTasks = [Services.AuditNotificationWorker, Services.RoleRecoveryService, Services.SessionService, ChallengeCleanup];
-        if (Services.NicknameService) {
-            this.BackgroundTasks.push(Services.NicknameService);
-        }
+        this.BackgroundTasks = [Services.AuditNotificationWorker, Services.RoleRecoveryService, Services.SessionService, ChallengeCleanup, Services.NicknameService];
         for (const Task of this.BackgroundTasks) {
             Task.Start();
         }

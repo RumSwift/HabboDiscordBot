@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import dotenv from 'dotenv';
-import { Games, Hotels } from '../Utils/HotelConfiguration.js';
 
 export class ConfigurationError extends Error {
     constructor(Problems) {
@@ -13,9 +12,30 @@ export class ConfigurationError extends Error {
 
 // Variables whose values are credentials. dotenv silently truncates unquoted
 // values at "#", so we check the raw .env text for that mistake.
-const CredentialVariables = ['DB_USER', 'DB_PASSWORD', 'DISCORD_TOKEN', 'INTERNAL_API_KEY', 'VERIFICATION_CODE_SECRET'];
+const CredentialVariables = ['DB_USER', 'DB_PASSWORD', 'DISCORD_TOKEN', 'INTERNAL_API_KEY', 'VERIFICATION_CODE_SECRET', 'ADMIN_PASSWORD'];
 
 const SnowflakePattern = /^\d{17,20}$/;
+
+// No longer read: servers, roles, log channels and nickname enforcement are set on the admin page.
+export const RetiredVariables = Object.freeze([
+    'ENFORCE_NICKNAMES',
+    'HABBO_GUILD_ID',
+    'ORIGINS_GUILD_ID',
+    'DISCORD_LOG_THREAD_ID',
+    'ORIGINS_LOG_CHANNEL_ID',
+    'HABBO_ROLE_COM',
+    'HABBO_ROLE_COM_BR',
+    'HABBO_ROLE_ES',
+    'HABBO_ROLE_FI',
+    'HABBO_ROLE_FR',
+    'HABBO_ROLE_DE',
+    'HABBO_ROLE_IT',
+    'HABBO_ROLE_NL',
+    'HABBO_ROLE_COM_TR',
+    'ORIGINS_VERIFIED_COM',
+    'ORIGINS_VERIFIED_ES',
+    'ORIGINS_VERIFIED_BR',
+]);
 
 export function FindUnquotedHashCharacters(RawEnvText) {
     const ProblemVariables = [];
@@ -74,30 +94,6 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         return Value;
     };
 
-    const OptionalBoolean = (Name, DefaultValue) => {
-        const Raw = ReadTrimmed(Name).toLowerCase();
-        if (Raw === '') {
-            return DefaultValue;
-        }
-        if (['true', '1', 'yes', 'on'].includes(Raw)) {
-            return true;
-        }
-        if (['false', '0', 'no', 'off'].includes(Raw)) {
-            return false;
-        }
-        Problems.push(`${Name} must be true or false.`);
-        return DefaultValue;
-    };
-
-    const OptionalSnowflake = (Name) => {
-        const Value = ReadTrimmed(Name);
-        if (Value !== '' && !SnowflakePattern.test(Value)) {
-            Problems.push(`${Name} must be a Discord ID (17-20 digits) or left empty.`);
-            return '';
-        }
-        return Value;
-    };
-
     const Database = {
         Host: Required('DB_HOST'),
         Port: Integer('DB_PORT', 3306, 1, 65535),
@@ -109,26 +105,9 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         Problems.push('DB_NAME may only contain letters, digits and underscores.');
     }
 
-    // Only used once, to fill the Guilds / GuildRoles / GuildLogChannels tables on first start.
-    const GuildSeed = [];
-    const SeedGuild = (GuildType, Name, GuildIdVariable, LogChannelVariable) => {
-        const GuildId = OptionalSnowflake(GuildIdVariable);
-        const Roles = Hotels.filter((Hotel) => Hotel.Game === GuildType)
-            .map((Hotel) => ({ RoleType: Hotel.RoleType, RoleId: OptionalSnowflake(Hotel.SeedRoleVariable) }))
-            .filter((Role) => Role.RoleId);
-        const LogChannelId = OptionalSnowflake(LogChannelVariable);
-        const LogChannels = LogChannelId ? [{ ChannelType: 'VERIFICATION', ChannelId: LogChannelId }] : [];
-        if (GuildId) {
-            GuildSeed.push({ GuildType, Name, GuildId, Roles, LogChannels });
-        }
-    };
-    SeedGuild(Games.Habbo, 'Habbo Discord', 'HABBO_GUILD_ID', 'DISCORD_LOG_THREAD_ID');
-    SeedGuild(Games.Origins, 'Habbo Origins Discord', 'ORIGINS_GUILD_ID', 'ORIGINS_LOG_CHANNEL_ID');
-
     const Discord = {
         Token: Required('DISCORD_TOKEN', { Trim: false }),
         ClientId: Required('DISCORD_CLIENT_ID'),
-        EnforceNicknames: OptionalBoolean('ENFORCE_NICKNAMES', true),
         NicknameSweepIntervalSeconds: Integer('NICKNAME_SWEEP_INTERVAL_SECONDS', 60, 30, 86400),
     };
     if (Discord.ClientId && !SnowflakePattern.test(Discord.ClientId)) {
@@ -142,6 +121,14 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
     };
     if (Api.InternalApiKey && Api.InternalApiKey.length < 32) {
         Problems.push('INTERNAL_API_KEY must be at least 32 characters long. Generate one with crypto.randomBytes(32).');
+    }
+
+    // The admin page (/admin) is switched off while ADMIN_PASSWORD is empty.
+    const Admin = {
+        Password: ReadRaw('ADMIN_PASSWORD'),
+    };
+    if (Admin.Password && Admin.Password.length < 16) {
+        Problems.push('ADMIN_PASSWORD must be at least 16 characters long, or left empty to switch the admin page off.');
     }
 
     const Verification = {
@@ -173,14 +160,18 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         throw new ConfigurationError(Problems);
     }
 
+    // Settings that moved to the admin page; reported at start so leftovers are not mistaken for live settings.
+    const IgnoredVariables = RetiredVariables.filter((Name) => ReadTrimmed(Name) !== '');
+
     return Object.freeze({
         Database: Object.freeze(Database),
         Discord: Object.freeze(Discord),
-        GuildSeed: Object.freeze(GuildSeed),
+        Admin: Object.freeze(Admin),
         Api: Object.freeze(Api),
         Verification: Object.freeze(Verification),
         HabboApi: Object.freeze(HabboApi),
         LogLevel,
+        IgnoredVariables: Object.freeze(IgnoredVariables),
     });
 }
 
@@ -188,6 +179,12 @@ export function GetConfigurationWarnings(Config) {
     const Warnings = [];
     if (!['127.0.0.1', 'localhost', '::1'].includes(Config.Api.Host)) {
         Warnings.push(`Internal API is bound to ${Config.Api.Host}. Remote access must be protected with HTTPS and network restrictions.`);
+    }
+    if (Config.IgnoredVariables?.length > 0) {
+        Warnings.push(`These .env settings are no longer used and can be deleted (they are set on the admin page now): ${Config.IgnoredVariables.join(', ')}.`);
+    }
+    if (!Config.Admin.Password) {
+        Warnings.push('ADMIN_PASSWORD is not set, so the admin page is switched off. Set it to configure servers, roles and log channels.');
     }
     return Warnings;
 }
