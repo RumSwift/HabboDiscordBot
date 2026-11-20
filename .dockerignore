@@ -1,0 +1,13 @@
+node_modules
+.git
+.idea
+.vscode
+.claude
+.env
+.env.*
+tests
+coverage
+logs
+*.log
+vitest.config.js
+nodemon.json
