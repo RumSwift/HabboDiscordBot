@@ -11,7 +11,6 @@ import {
 import { ScheduleSelfDestruct, ShowLoading } from '../../Flows/FlowHelpers.js';
 import { ClosePanel } from './OpenPanels.js';
 
-// 🕊️ Forgive Last Sanction (Moderate User menu): shows the member's last sanction in this server and asks to confirm.
 export async function ShowForgiveConfirm(Interaction, Context, { TargetId }) {
     const [Target, Sanctions] = await Promise.all([
         Interaction.client.users.fetch(TargetId).catch(() => null),
@@ -33,7 +32,6 @@ export async function HandleForgiveCancel(Interaction, Context) {
     ScheduleSelfDestruct(Interaction, Context.Logger);
 }
 
-// Lifts the member's mute. True when lifted, false when it could not be, null when they were not muted.
 async function RemoveMute(Member, Context, Reason) {
     if (!Member?.isCommunicationDisabled?.()) {
         return null;
@@ -47,15 +45,12 @@ async function RemoveMute(Member, Context, Reason) {
     }
 }
 
-// "Yes, Forgive": the sanction is marked forgiven, so it leaves their history and no longer counts towards their next one
-// (a tiered sanction steps back one). A mute from it is lifted, they are sent an apology, and it is logged in Mod Actions.
 export async function HandleForgiveConfirm(Interaction, Context, { TargetId, Arguments }) {
     const SanctionId = Arguments[1];
     await ShowLoading(Interaction, 'Forgiving...');
     const Fail = (Description) => Interaction.editReply(BuildModPanelResultView('Forgive Failed', Description, { Success: false }));
     const { GuildConfigurationRepository, ModSanctionRepository, ModActionLogService } = Context.Services;
 
-    // Only the sanction that was shown is forgiven, and only while it is still their last one.
     const Sanctions = await ModSanctionRepository.GetForUser(Interaction.guildId, TargetId);
     const Sanction = Sanctions[0];
     if (!Sanction || String(Sanction.SanctionId) !== SanctionId) {
@@ -89,7 +84,6 @@ export async function HandleForgiveConfirm(Interaction, Context, { TargetId, Arg
         Context.Logger.Info('Could not DM a forgiveness apology', { DiscordUserId: TargetId, Error: DmError });
     }
 
-    // The rest of the list is what still counts, now this one is forgiven.
     const StillCounted = Sanctions.slice(1).filter((Other) => Other.SanctionType === Sanction.SanctionType).length;
     const NextSanction = NextSanctionText(Sanction.SanctionType, StillCounted);
     const { Emoji, Label } = SanctionLabel(Sanction.SanctionType);

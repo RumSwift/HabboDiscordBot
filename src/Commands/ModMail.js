@@ -2,9 +2,7 @@ import { InteractionContextType, SlashCommandBuilder } from 'discord.js';
 import { ExecuteModMailBanCommand, ModMailBanHandlers, ModMailBanPermission } from '../Flows/ModMailBanFlow.js';
 import { ModMailHandlers } from '../Flows/ModMailFlow.js';
 
-// Mod mail itself starts from a DM; the command is for staff. Its buttons, menu and modal are registered here too.
 export default {
-    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
     StaffOnly: true,
     Data: new SlashCommandBuilder()
         .setName('modmail')

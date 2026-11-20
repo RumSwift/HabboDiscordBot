@@ -3,7 +3,6 @@ import { SetupChannelChoices, SetupRoleChoices, SetupServerChoices } from '../Co
 import { ExecuteSetupCommand } from '../Flows/SetupFlow.js';
 
 export default {
-    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
     StaffOnly: true,
     Data: new SlashCommandBuilder()
         .setName('setup')

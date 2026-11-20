@@ -5,14 +5,12 @@ export function CalculateBackoffMs(AttemptCount, BaseMs = 30000, MaxMs = 3600000
     return Math.min(MaxMs, BaseMs * 2 ** Exponent);
 }
 
-// Discord API error codes that will never succeed on retry.
-// https://discord.com/developers/docs/topics/opcodes-and-status-codes#json
 const PermanentDiscordErrorCodes = new Set([
-    10003, // Unknown Channel (thread deleted / wrong ID)
-    10007, // Unknown Member (user left the server)
-    10011, // Unknown Role
-    10013, // Unknown User
-    50035, // Invalid Form Body
+    10003,
+    10007,
+    10011,
+    10013,
+    50035,
 ]);
 
 export class PermanentError extends Error {

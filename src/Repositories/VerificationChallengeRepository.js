@@ -85,7 +85,6 @@ export class VerificationChallengeRepository {
     }
 
     async RecordFailedAttempt(ChallengeId, MaxAttempts, Now, Executor = this.Pool) {
-        // Status must be set first: MariaDB applies SET left to right.
         const [Result] = await Executor.query(
             `UPDATE VerificationChallenges
              SET Status = IF(FailedAttemptCount + 1 >= ?, 'FAILED', 'ACTIVE'),

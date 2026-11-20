@@ -6,7 +6,6 @@ export const HabboLookupStatuses = Object.freeze({
     Unavailable: 'UNAVAILABLE',
 });
 
-// If Habbo asks us to wait longer than this, give up now and tell the user to try later.
 const MaxRetryAfterWaitMs = 5000;
 
 const DefaultSleep = (Milliseconds) => new Promise((Resolve) => setTimeout(Resolve, Milliseconds));
@@ -19,7 +18,6 @@ export class HabboApiService {
         this.Sleep = Sleep;
         this.Logger = Logger;
         this.Clock = Clock;
-        // Hostname -> timestamp (ms) until which Habbo has asked us to back off.
         this.RateLimitedUntilByHost = new Map();
     }
 
@@ -86,12 +84,10 @@ export class HabboApiService {
             return { Result: { Status: HabboLookupStatuses.Found, Account }, RetryDelayMs: null };
         }
 
-        // Habbo explicitly says the user does not exist.
         if (Response.status === 404 && Body?.error === 'not-found') {
             return { Result: { Status: HabboLookupStatuses.NotFound }, RetryDelayMs: null };
         }
 
-        // Habbo rejected the name format - no account can have this name.
         if (Response.status === 400 && Array.isArray(Body?.errors) && Body.errors.some((Item) => Item?.param === 'name')) {
             return { Result: { Status: HabboLookupStatuses.NotFound }, RetryDelayMs: null };
         }
@@ -102,7 +98,6 @@ export class HabboApiService {
             this.Logger?.Warn('Habbo API rate limit hit', { Hostname, RetryAfterMs });
             const CanWait = RetryAfterMs <= MaxRetryAfterWaitMs;
             if (CanWait) {
-                // We are going to wait it out ourselves, so clear the cooldown for the retry.
                 this.RateLimitedUntilByHost.delete(Hostname);
             }
             return {

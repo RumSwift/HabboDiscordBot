@@ -7,9 +7,7 @@ import { ClosePanel } from './OpenPanels.js';
 
 export const EmergencyMuteMs = 24 * 60 * 60 * 1000;
 
-// 🔕 Emergency Mute: times the member out for 24 hours without telling them, logs it in Mod Actions and records it in their history.
 export async function HandleEmergencyMute(Interaction, Context, { TargetId }) {
-    // Muting and logging can take longer than Discord's 3 seconds.
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const Fail = (Description) => Interaction.editReply(BuildModPanelResultView('Emergency Mute Failed', Description, { Success: false }));
 

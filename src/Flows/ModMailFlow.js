@@ -27,12 +27,10 @@ import { SaveAttachments } from '../Services/Logging/MessageDeleteLogService.js'
 import { BuildCustomId } from '../Utils/CustomId.js';
 import { ScheduleSelfDestruct, ShowLoading } from './FlowHelpers.js';
 
-const MaxMessageLength = 2000; // Discord limit
-const MaxThreadNameLength = 100; // Discord limit
-// The smallest upload limit (DMs and unboosted servers); used both ways so a file never makes the whole message fail.
+const MaxMessageLength = 2000;
+const MaxThreadNameLength = 100;
 const ForwardLimitBytes = 10 * 1024 * 1024;
 
-// Every server with a mod mail forum: [{ GuildId, GuildType, ChannelId }].
 function GetTeams(Context) {
     return Context.Services.GuildConfigurationRepository.GetLogChannels(LogChannelTypes.ModMailForum);
 }
@@ -41,7 +39,6 @@ async function GetOtherTeam(Context, GuildId) {
     return (await GetTeams(Context)).find((Team) => Team.GuildId !== GuildId) ?? null;
 }
 
-// The teams a member may contact: bans are per server, so a ban by one team leaves the other open.
 async function GetAllowedTeams(Context, DiscordUserId) {
     const [Teams, Banned] = await Promise.all([GetTeams(Context), Context.Services.ModMailBanRepository.GetBannedGuildIds(DiscordUserId)]);
     return { Teams, Allowed: Teams.filter((Team) => !Banned.has(Team.GuildId)) };
@@ -51,7 +48,6 @@ async function FetchChannel(Client, ChannelId) {
     return ChannelId ? Client.channels.fetch(ChannelId).catch(() => null) : null;
 }
 
-// Everything the thread card needs besides the mail itself.
 async function BuildThreadCard(Context, Client, ModMail) {
     const { GuildConfigurationRepository, ModMailRepository } = Context.Services;
     const [User, PingRoleId, OtherTeam, PassedFrom] = await Promise.all([
@@ -74,7 +70,6 @@ async function RefreshThreadCard(Context, Client, ModMailId) {
     }
 }
 
-// Creates the mail's thread in its team's forum and stores the thread ID. Deletes the mail row if it fails.
 async function CreateThreadForMail(Context, Client, ModMailId) {
     const { ModMailRepository } = Context.Services;
     try {
@@ -94,7 +89,6 @@ async function CreateThreadForMail(Context, Client, ModMailId) {
     }
 }
 
-// Downloads a message's files so they can be re-uploaded elsewhere (screenshots, videos, documents).
 async function CollectFiles(Message, Context) {
     if (!Message.attachments?.size) {
         return { Saved: [], Uploads: [], NotForwarded: [] };
@@ -112,7 +106,6 @@ function HasSomethingToSend(Message) {
     return Boolean(Message.content) || Message.attachments?.size > 0;
 }
 
-// A member wrote to the bot in DMs: add it to their open mail, or offer to open one.
 export async function HandleModMailDirectMessage(Message, Context) {
     if (Message.author.bot || Message.guildId || !HasSomethingToSend(Message)) {
         return;
@@ -138,7 +131,6 @@ export async function HandleModMailDirectMessage(Message, Context) {
             }
             return;
         }
-        // The thread was deleted or locked by hand: treat the mail as closed.
         await ModMailRepository.Close(Open.ModMailId, null);
         Context.Logger.Warn('Closed a mod mail whose thread is gone or locked', { ModMailId: Open.ModMailId, ThreadId: Open.ThreadId });
     }
@@ -152,7 +144,6 @@ export async function HandleModMailDirectMessage(Message, Context) {
     await Message.author.send(BuildOpenModMailPromptView(Message.author, BotAvatarUrl));
 }
 
-// A moderator wrote in a mod mail thread: send it to the member anonymously.
 export async function HandleModMailThreadMessage(Message, Context) {
     if (Message.author.bot || !Message.guildId || !Message.channel?.isThread?.() || !HasSomethingToSend(Message)) {
         return;
@@ -184,7 +175,6 @@ export async function HandleModMailThreadMessage(Message, Context) {
     if (Delivered && NotForwarded.length > 0) {
         await Message.reply({ content: `⚠️ These files were not sent to the user:\n${FormatNotForwarded(NotForwarded)}`, allowedMentions: { parse: [] } }).catch(() => {});
     }
-    // Once a moderator has replied, the mail can no longer be passed to the other team.
     if (IsFirstReply) {
         await RefreshThreadCard(Context, Message.client, ModMail.ModMailId);
     }
@@ -283,7 +273,6 @@ export async function HandleModMailClose(Interaction, Context, { Arguments }) {
 
 export async function HandleModMailConfirmClose(Interaction, Context, { Arguments }) {
     const { ModMailRepository } = Context.Services;
-    // Answer Discord straight away: closing takes several API calls, more than the 3 seconds allowed.
     await ShowLoading(Interaction, 'Closing...');
     const ModMail = await ModMailRepository.FindById(Arguments[0]);
     if (!ModMail || !(await ModMailRepository.Close(ModMail.ModMailId, Interaction.user.id))) {
@@ -308,7 +297,6 @@ export async function HandleModMailConfirmClose(Interaction, Context, { Argument
     ScheduleSelfDestruct(Interaction, Context.Logger);
 }
 
-// Called by /modmailban: an open mail with the banning server's team is closed and its thread locked.
 export async function CloseModMailForBan(Context, Client, { GuildId, DiscordUserId, ModeratorName }) {
     const { ModMailRepository } = Context.Services;
     const Open = await ModMailRepository.FindOpenByUser(DiscordUserId);
@@ -352,7 +340,6 @@ export async function HandleModMailPass(Interaction, Context, { Arguments }) {
 
 export async function HandleModMailConfirmPass(Interaction, Context, { Arguments }) {
     const { ModMailRepository } = Context.Services;
-    // Answer Discord straight away: passing takes several API calls, more than the 3 seconds allowed.
     await ShowLoading(Interaction, 'Passing...');
     const ModMail = await ModMailRepository.FindById(Arguments[0]);
     const OtherTeam = ModMail ? await GetOtherTeam(Context, ModMail.GuildId) : null;
@@ -366,7 +353,6 @@ export async function HandleModMailConfirmPass(Interaction, Context, { Arguments
         await Refuse(`This member is banned from mod mail with the **${TeamName(OtherTeam.GuildType)}**.`);
         return;
     }
-    // Checked again here, atomically, in case a moderator replied since the button was pressed.
     if (!(await ModMailRepository.MarkPassed(ModMail.ModMailId, Interaction.user.id))) {
         await Refuse('A moderator has already replied, or the mod mail was closed, so it can no longer be passed on.');
         return;

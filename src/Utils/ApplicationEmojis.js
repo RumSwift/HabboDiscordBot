@@ -1,16 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Custom emojis belong to one bot application, so their IDs differ for every copy of the bot. Each emoji here has an
-// image in assets/emojis/<Name>.png. On start, SyncApplicationEmojis finds each one on the bot's application by name,
-// uploads any that are missing, and records the IDs. Until then (or if that fails) a plain Unicode emoji is used, which
-// always works. DefaultId is the original bot's emoji, kept so its messages look the same as before.
-
 export const EmojiAssetsDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'emojis');
 
 const Registry = new Map();
 
-// Returns an object with just `name` and `id`, which is what discord.js accepts for setEmoji().
 export function ApplicationEmoji(Name, DefaultId, Fallback) {
     Registry.set(Name, { Id: DefaultId, Fallback });
     return Object.freeze({
@@ -34,7 +28,6 @@ export function GetApplicationEmojiNames() {
     return [...Registry.keys()];
 }
 
-// "<:Name:id>" for a custom emoji, or the Unicode fallback.
 export function FormatEmoji(Emoji) {
     return Emoji.id ? `<:${Emoji.name}:${Emoji.id}>` : Emoji.name;
 }

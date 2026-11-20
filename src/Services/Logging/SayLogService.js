@@ -3,8 +3,8 @@ import { Colours } from '../../Components/ComponentStyles.js';
 import { LogChannelTypes } from '../../Repositories/GuildConfigurationRepository.js';
 import { BuildLogCard, FormatCodeBlock } from './LogCard.js';
 
-const MaxMessageLength = 3000; // leaves room for the rest of the card within Discord's 4000-character total
-const MaxEmbedDescriptionLength = 2500; // title, footer and image share the same 4000-character budget
+const MaxMessageLength = 3000;
+const MaxEmbedDescriptionLength = 2500;
 
 export function BuildSayCard(Staff, Message, { Now = new Date() } = {}) {
     return BuildLogCard({
@@ -24,7 +24,6 @@ export function BuildSayCard(Staff, Message, { Now = new Date() } = {}) {
 export function BuildSayEmbedCard(Staff, Message, { Now = new Date() } = {}) {
     const Embed = Message.embeds?.[0] ?? {};
     const Fields = [{ Label: 'Channel', Value: channelMention(Message.channelId) }];
-    // The ping above the embed. Log cards never ping, and @everyone/@here are shown as code so they stay inert.
     const TaggedRoleId = /^<@&(\d{17,20})>$/.exec(Message.content ?? '')?.[1];
     if (TaggedRoleId) {
         Fields.push({ Label: 'Tagged', Value: roleMention(TaggedRoleId) });
@@ -57,7 +56,6 @@ export class SayLogService {
         this.GuildLogService = GuildLogService;
     }
 
-    // Always logged, even in channels excluded with /stoplogs, because it records a staff action.
     async HandleSay({ Staff, GuildId, Message }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -67,7 +65,6 @@ export class SayLogService {
         });
     }
 
-    // Logged to its own channel, also ignoring /stoplogs exclusions.
     async HandleSayEmbed({ Staff, GuildId, Message }) {
         return this.GuildLogService.Send({
             GuildId,

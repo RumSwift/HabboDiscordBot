@@ -162,7 +162,6 @@ export class Application {
 
         return {
             GuildConfigurationRepository: GuildConfiguration,
-            // Saving on the admin page re-runs the server check, so a newly added server's members get cached.
             AdminService: new AdminService({ GuildConfigurationRepository: GuildConfiguration, Client: DiscordClient, Logger, OnConfigurationChanged: () => this.CheckGuildConfiguration() }),
             DmModRepository: new DmModRepository(Pool),
             ModMailRepository: new ModMailRepository(Pool),
@@ -182,7 +181,6 @@ export class Application {
             VerificationService: Verification,
             SessionService: new VerificationSessionService({ VerificationService: Verification, Logger }),
             AuditHistoryService: new AuditHistoryService({ LinkRepository, AuditRepository, NotificationRepository }),
-            // Only renames members in servers with nickname enforcement switched on (admin page).
             NicknameService: new NicknameService({ Client: DiscordClient, LinkRepository, GuildConfigurationRepository: GuildConfiguration, Logger, IntervalMs: Config.Discord.NicknameSweepIntervalSeconds * 1000 }),
             RoleRecoveryService: new RoleRecoveryService({
                 RoleOperationRepository: RoleOperationRepositoryInstance,
@@ -210,7 +208,6 @@ export class Application {
                 Logger.Warn('The bot is not in a configured server', { Name: Guild.Name, GuildId: Guild.GuildId });
                 continue;
             }
-            // Discord only reports a member leaving if they are cached, and their roles are needed to restore them later.
             try {
                 await DiscordGuild.members?.fetch?.();
             } catch (FetchError) {
@@ -258,7 +255,6 @@ export class Application {
             this.DiscordClient = null;
         }
 
-        // Last, after everything that uses it.
         if (this.Pool) {
             await this.Pool.end().catch((StopError) => Logger.Warn('Error closing database pool', { Error: StopError }));
             this.Pool = null;

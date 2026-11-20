@@ -15,7 +15,6 @@ function FormatTimestamp(Value) {
     return `${time(DateValue, TimestampStyles.LongDateTime)} (${time(DateValue, TimestampStyles.RelativeTime)})`;
 }
 
-// Habbo hotels serve avatar images themselves; Origins avatars come from Frankly Origins (no gestures there).
 export function BuildAvatarImageUrl(HotelCode, HabboUsername, Gesture) {
     const Hotel = GetHotel(HotelCode);
     if (Hotel.Game === Games.Origins) {

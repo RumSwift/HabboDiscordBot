@@ -1,5 +1,3 @@
-// npm run setup-db: creates the database and every table, then exits. The bot does the same on every start,
-// so this is only needed to prepare the database before the first start (or to check the .env database settings).
 import { ConfigurationError, LoadEnvironment } from './Config/Environment.js';
 import { CreateDatabasePool, TestDatabaseConnection } from './Database/DatabaseConnection.js';
 import { CreateSchema, EnsureDatabaseExists } from './Database/Schema.js';

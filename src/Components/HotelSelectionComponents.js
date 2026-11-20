@@ -4,7 +4,7 @@ import { GameLabels, Games, GetHotelsForGame } from '../Utils/HotelConfiguration
 import { Colours, Thumbnails, View } from './ComponentStyles.js';
 import { FormatLinkedAccount } from './DashboardComponents.js';
 
-const MaxButtonsPerRow = 5; // Discord limit
+const MaxButtonsPerRow = 5;
 
 function CancelButton(OwnerDiscordUserId) {
     return new ButtonBuilder().setCustomId(BuildCustomId('Cancel', OwnerDiscordUserId)).setLabel('Cancel').setStyle(ButtonStyle.Danger);

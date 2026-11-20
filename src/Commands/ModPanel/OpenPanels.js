@@ -1,8 +1,5 @@
-// Open Modpanels, so they can be closed once an action is done or after a minute without use.
-// A panel is an ephemeral reply to /modpanel, so it is deleted through that command's interaction (valid for 15 minutes).
 export const PanelIdleMs = 60 * 1000;
 
-// One panel per moderator and member in a server: opening another replaces it.
 export function PanelKey(Interaction, TargetId) {
     return `${Interaction.guildId}:${Interaction.user.id}:${TargetId}`;
 }
@@ -18,7 +15,6 @@ export class OpenPanelRegistry {
         this.Panels.set(Key, { CommandInteraction, Logger, Timer: this.StartTimer(Key) });
     }
 
-    // Something was clicked on the panel: it stays open for another IdleMs.
     Touch(Key) {
         const Panel = this.Panels.get(Key);
         if (!Panel) {
@@ -47,7 +43,6 @@ export class OpenPanelRegistry {
 
 export const OpenPanels = new OpenPanelRegistry();
 
-// Called by an action once it has been applied: the panel it came from closes.
 export function ClosePanel(Interaction, TargetId, Logger) {
     OpenPanels.Close(PanelKey(Interaction, TargetId), Logger);
 }

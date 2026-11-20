@@ -31,7 +31,6 @@ async function Finish(Interaction, Context, ResultView) {
     ScheduleSelfDestruct(Interaction, Context.Logger);
 }
 
-// /modmail ban <user>: shows the member's ban status in this server with the actions that apply.
 export async function ExecuteModMailBanCommand(Interaction, Context) {
     if (await RejectIfNotPermitted(Interaction)) {
         return;
@@ -55,7 +54,6 @@ export async function HandleBanApply(Interaction, Context, { Arguments: [TargetI
         return;
     }
     const Duration = BanDurations[DurationKey];
-    // Banning closes threads and posts logs, which can take longer than Discord's 3 seconds.
     await ShowLoading(Interaction, 'Banning...');
     const Target = await Interaction.client.users.fetch(TargetId);
     const Name = escapeMarkdown(Target.username);
@@ -66,7 +64,6 @@ export async function HandleBanApply(Interaction, Context, { Arguments: [TargetI
         return;
     }
     if (Outcome === BanOutcomes.AlreadyBanned) {
-        // Someone else banned them meanwhile: show the current state instead.
         await Interaction.editReply(BuildBanPanelView(Interaction.user.id, Target, await Context.Services.ModMailBanRepository.GetActiveBan(Interaction.guildId, TargetId)));
         return;
     }
@@ -114,7 +111,6 @@ export async function HandleBanExtendMenu(Interaction, Context, { Arguments: [Ta
         return;
     }
     const [Target, Ban] = await LoadTargetAndBan(Interaction, Context, TargetId);
-    // If the ban ended, was removed or made permanent since the panel opened, show the current state instead.
     await Interaction.update(Ban?.ExpiresTimestamp ? BuildExtendPanelView(Interaction.user.id, Target, Ban) : BuildBanPanelView(Interaction.user.id, Target, Ban));
 }
 

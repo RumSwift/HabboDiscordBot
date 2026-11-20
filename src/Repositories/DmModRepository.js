@@ -8,7 +8,6 @@ export class DmModRepository {
         this.Pool = Pool;
     }
 
-    // Returns the new ID, or null when the server is not in the Guilds table.
     async Create({ GuildId, DiscordUserId, MessageText, ReportedDiscordUserId = null, ReportedMessage = null, ImageFileName = null, ChannelId, Now = new Date() }) {
         const [Result] = await this.Pool.query(
             `INSERT INTO DmModMessages (GuildUuid, DiscordUserId, MessageText, ReportedDiscordUserId, ReportedMessage, ImageFileName, ChannelId, Status, CreatedTimestamp)
@@ -31,7 +30,6 @@ export class DmModRepository {
         return Rows[0] ? { ...Rows[0], DmModId: String(Rows[0].DmModId) } : null;
     }
 
-    // Only one moderator can answer a message: false means someone else already did.
     async ClaimReply(DmModId, { RepliedByDiscordUserId, ReplyText, Now = new Date() }) {
         const [Result] = await this.Pool.query(
             "UPDATE DmModMessages SET Status = 'REPLIED', RepliedByDiscordUserId = ?, ReplyText = ?, RepliedTimestamp = ? WHERE DmModId = ? AND Status = 'OPEN'",

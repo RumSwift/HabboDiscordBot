@@ -53,7 +53,6 @@ export function BuildEmergencyMuteCard(Target, Moderator, { DisplayName, EndsTim
 
 export const ScamBanReason = 'Scam/Phishing';
 
-// BannedInName is set on the card posted in the other server: the name of the server the ban was made in.
 export function BuildScamBanCard(Target, Moderator, { DisplayName, BannedInName = null, Now = new Date() }) {
     const Action = BannedInName
         ? `${userMention(Target.id)} (${DisplayName}) was banned for Phishing/Scamming in the ${BannedInName} Discord server, so they have also been banned from here.`
@@ -77,7 +76,6 @@ export const DmsOffNote = 'User has DMs off, so they may not have received the m
 
 export const WarningDmsOffNote = 'User has DMs off, so they may not have received the warning.';
 
-// MuteRemoved: true when a mute was lifted, false when one could not be, null when there was none.
 export function BuildVerbalWarningCard(Target, Moderator, { DisplayName, PrivateReason, PublicReason, MessageLink = '', Delivered, MuteRemoved = null, Now = new Date() }) {
     const Fields = [
         { Label: 'Action', Value: `Official Verbal Warning sent to ${userMention(Target.id)} (${DisplayName})` },
@@ -93,7 +91,6 @@ export function BuildVerbalWarningCard(Target, Moderator, { DisplayName, Private
     return BuildLogCard({ Title: '⚠️ Verbal Warning ⚠️', User: Target, Colour: 3851229, Fields, Now });
 }
 
-// A Community Rules Violation strike. EndsTimestamp is null for a ban.
 export function BuildCommunityRulesCard(Target, Moderator, { DisplayName, StrikeNumber, Punishment, EndsTimestamp = null, PrivateReason, PublicReason, MessageLink = '', Delivered, Now = new Date() }) {
     const IsBan = EndsTimestamp === null;
     const Fields = [
@@ -113,7 +110,6 @@ export function BuildCommunityRulesCard(Target, Moderator, { DisplayName, Strike
     return BuildLogCard({ Title: IsBan ? '🚨 Sanction Applied: User Banned 🚨' : '⚔️ Sanction Applied ⚔️', User: Target, Colour: IsBan ? 12060423 : 4541125, Fields, Now });
 }
 
-// A custom sanction (mute, kick or ban chosen by the moderator), in its own colour. EndsTimestamp is set only for a mute.
 export function BuildCustomSanctionCard(Target, Moderator, { DisplayName, Punishment, EndsTimestamp = null, PrivateReason, PublicReason, MessageLink = '', Delivered, Now = new Date() }) {
     const Emoji = EndsTimestamp ? '🔇' : Punishment === 'User Kicked' ? '👢' : '🚨';
     const Fields = [
@@ -134,8 +130,6 @@ export function BuildCustomSanctionCard(Target, Moderator, { DisplayName, Punish
     return BuildLogCard({ Title: '🛠️ Custom Sanction Applied 🛠️', User: Target, Colour: 0x9b59b6, Fields, Now });
 }
 
-// A sanction was forgiven. Sanction is the forgiven row; NextSanction says what their next one of that type is now (null when not tiered).
-// MuteRemoved: true when a mute was lifted, false when one could not be, null when there was none to lift.
 export function BuildForgivenCard(Target, Moderator, { DisplayName, Sanction, SanctionLabel, NextSanction = null, MuteRemoved = null, Delivered, Now = new Date() }) {
     const Given = time(new Date(Sanction.CreatedTimestamp), TimestampStyles.RelativeTime);
     const Fields = [
@@ -155,7 +149,6 @@ export function BuildForgivenCard(Target, Moderator, { DisplayName, Sanction, Sa
     return BuildLogCard({ Title: '🕊️ Sanction Forgiven 🕊️', User: Target, Colour: Colours.Success, Fields, Now });
 }
 
-// A Racism violation. EndsTimestamp is null for a ban.
 export function BuildRacismCard(Target, Moderator, { DisplayName, ViolationNumber, Punishment, EndsTimestamp = null, PrivateReason, PublicReason, MessageLink, Delivered, Now = new Date() }) {
     const IsBan = EndsTimestamp === null;
     const Fields = [
@@ -175,7 +168,6 @@ export function BuildRacismCard(Target, Moderator, { DisplayName, ViolationNumbe
     return BuildLogCard({ Title: '😡 Racism Violation Applied 😡', User: Target, Colour: 0x8b0000, Fields, Now });
 }
 
-// An Inappropriate Profile violation. Stage is one of ProfileStages (warning, kick or ban).
 export function BuildInappropriateProfileCard(Target, Moderator, { DisplayName, Stage, Reason, PreviousViolations, Delivered, Now = new Date() }) {
     const Titles = { Warning: '💳 Inappropriate Profile Warning 💳', Kick: '💳 Inappropriate Profile Kick 💳', Ban: '💳 Inappropriate Profile Ban 💳' };
     const Fields = [
@@ -193,7 +185,6 @@ export function BuildInappropriateProfileCard(Target, Moderator, { DisplayName, 
     return BuildLogCard({ Title: Titles[Stage.Key], User: Target, Colour: 0xff69b4, Fields, Now });
 }
 
-// A note in one server's notes log. Author is null on the copy posted to another server, so it does not say who added it there.
 export function BuildNoteCard(Target, { Title, NoteText, MessageLink = null, OriginName, IsGlobal, Author = null, Now = new Date() }) {
     const Fields = [
         { Label: 'Title', Value: escapeMarkdown(Title) },
@@ -227,8 +218,6 @@ export function BuildDirectMessageCard(Target, Moderator, { DisplayName, Message
     });
 }
 
-// The card every ban posts in the user banned channel, whatever it was for: the detail goes in Mod Actions.
-// Moderator is null on the copy posted in the other server for a cross-server ban.
 export function BuildUserBannedCard(Target, { DisplayName, Moderator = null, Now = new Date() }) {
     const Fields = [{ Label: 'Action', Value: `${userMention(Target.id)} (${DisplayName ?? Target.username}) was banned from the server.` }];
     if (Moderator) {
@@ -237,7 +226,6 @@ export function BuildUserBannedCard(Target, { DisplayName, Moderator = null, Now
     return BuildLogCard({ Title: '🚨 User Banned 🚨', User: Target, Colour: Colours.Danger, Fields, Now });
 }
 
-// Posted in the ban log when someone is unbanned, however it was done. Moderator and Reason come from the audit log, and are null when it could not be read.
 export function BuildUnbanCard(Target, { Moderator = null, Reason = null, Now = new Date() }) {
     const Fields = [
         { Label: 'Action', Value: `${userMention(Target.id)} (${Target.username}) was unbanned and can join the server again.` },
@@ -247,10 +235,8 @@ export function BuildUnbanCard(Target, { Moderator = null, Reason = null, Now = 
     return BuildLogCard({ Title: '✅ User Unbanned ✅', User: Target, Colour: Colours.Success, Fields, Now });
 }
 
-// How long after an unban its audit log entry is accepted as the one for it.
 const UnbanAuditWindowMs = 60 * 1000;
 
-// Who unbanned the user, and why, from the server's audit log (needs View Audit Log). Null when it cannot be found.
 async function FindUnbanEntry(Guild, UserId, Now = Date.now()) {
     try {
         const Logs = await Guild.fetchAuditLogs({ type: AuditLogEvent.MemberBanRemove, limit: 5 });
@@ -260,9 +246,7 @@ async function FindUnbanEntry(Guild, UserId, Now = Date.now()) {
     }
 }
 
-// Posts to the server's general "Mod Actions" thread. Each method returns the posted message, or false.
 export class ModActionLogService {
-    // UnbanLookupDelayMs: Discord can send the unban a moment before its audit log entry exists.
     constructor({ GuildLogService, UnbanLookupDelayMs = 2000 }) {
         this.GuildLogService = GuildLogService;
         this.UnbanLookupDelayMs = UnbanLookupDelayMs;
@@ -295,7 +279,6 @@ export class ModActionLogService {
         });
     }
 
-    // ChannelType is ModActions, or BanLog (the generic ban card) when the strike is a ban.
     async LogCommunityRulesStrike({ GuildId, ChannelType = LogChannelTypes.ModActions, Target, Moderator, ...Details }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -307,7 +290,6 @@ export class ModActionLogService {
         });
     }
 
-    // ChannelType is ModActions, or BanLog (the generic ban card) when the violation is a ban.
     async LogRacism({ GuildId, ChannelType = LogChannelTypes.ModActions, Target, Moderator, ...Details }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -319,7 +301,6 @@ export class ModActionLogService {
         });
     }
 
-    // ChannelType is ModActions, or BanLog (the generic ban card) when the violation is a ban.
     async LogInappropriateProfile({ GuildId, ChannelType = LogChannelTypes.ModActions, Target, Moderator, ...Details }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -331,7 +312,6 @@ export class ModActionLogService {
         });
     }
 
-    // Posted to the server's notes log.
     async LogNote({ GuildId, Target, ...Details }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -341,7 +321,6 @@ export class ModActionLogService {
         });
     }
 
-    // Posted to the server's direct message log, not Mod Actions.
     async LogDirectMessage({ GuildId, Target, Moderator, ...Details }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -351,7 +330,6 @@ export class ModActionLogService {
         });
     }
 
-    // ChannelType is ModActions, or BanLog (the generic ban card) for a ban.
     async LogCustomSanction({ GuildId, ChannelType = LogChannelTypes.ModActions, Target, Moderator, ...Details }) {
         return this.GuildLogService.Send({
             GuildId,
@@ -372,7 +350,6 @@ export class ModActionLogService {
         });
     }
 
-    // Someone was unbanned (by the bot, a mod or another bot): posted in green in that server's ban log.
     async LogUnban(Ban) {
         if (this.UnbanLookupDelayMs > 0) {
             await new Promise((Resolve) => setTimeout(Resolve, this.UnbanLookupDelayMs));
@@ -386,7 +363,6 @@ export class ModActionLogService {
         });
     }
 
-    // ChannelType is ModActions or BanLog (the generic ban card): a scam ban is posted to both in each server.
     async LogScamBan({ GuildId, ChannelType = LogChannelTypes.ModActions, Target, Moderator, DisplayName, BannedInName = null }) {
         return this.GuildLogService.Send({
             GuildId,

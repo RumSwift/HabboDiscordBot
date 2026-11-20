@@ -26,7 +26,6 @@ export function CreateApiApp({ Config, Services, Logger }) {
     );
     App.use(express.json({ limit: '10kb' }));
 
-    // Health check is public and reveals nothing sensitive.
     App.use(ApiPrefix, CreateHealthRoutes());
 
     const ProtectedRouter = express.Router();
@@ -35,7 +34,6 @@ export function CreateApiApp({ Config, Services, Logger }) {
     ProtectedRouter.use(CreateVerificationRoutes({ Services }));
     App.use(ApiPrefix, ProtectedRouter);
 
-    // Admin page for servers, roles and log channels; switched off unless ADMIN_PASSWORD is set.
     App.use(AdminPrefix, CreateAdminRouter({ Password: Config.Admin?.Password, AdminService: Services.AdminService, Logger }));
 
     App.use(NotFoundHandler);

@@ -22,11 +22,9 @@ export class DiscordRoleService {
 
     async ResolveMemberAndRole(DiscordUserId, RoleId, GuildId) {
         if (!this.Client?.isReady?.()) {
-            // Temporary: the bot is still connecting. The operation will be retried.
             throw new Error('Discord client is not ready.');
         }
 
-        // Operations queued before servers were configured have no GuildId; the role tells us the server.
         const Guild = GuildId
             ? this.Client.guilds.cache.get(GuildId)
             : this.Client.guilds.cache.find((CandidateGuild) => CandidateGuild.roles.cache.has(RoleId));

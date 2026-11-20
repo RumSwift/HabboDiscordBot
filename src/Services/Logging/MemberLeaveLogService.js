@@ -24,7 +24,6 @@ export class MemberLeaveLogService {
     }
 
     async HandleMemberLeave(Member) {
-        // Members the bot never cached have no join date or roles to show.
         if (Member.partial) {
             return false;
         }

@@ -1,13 +1,8 @@
 import mysql from 'mysql2/promise';
 
-// The whole database schema. Every statement is CREATE ... IF NOT EXISTS or ADD COLUMN IF NOT EXISTS, so this is safe
-// to run on every start: a new database gets everything, and an existing one only gets what it is missing.
-// Servers, roles and log channels are NOT filled in here; set them on the admin page (/admin).
-
 const TableOptions = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin';
 const SchemaLockName = 'HabboVerifyBot_Schema';
 
-// In creation order (tables with foreign keys come after the tables they reference).
 export const Tables = [
     [
         'HabboLinks',
@@ -24,7 +19,6 @@ export const Tables = [
         ActiveDiscordUserId VARCHAR(20) AS (IF(UnlinkedTimestamp IS NULL, DiscordUserId, NULL)) PERSISTENT,
         ActiveHabboUniqueId VARCHAR(64) AS (IF(UnlinkedTimestamp IS NULL, HabboUniqueId, NULL)) PERSISTENT,
         PRIMARY KEY (LinkId),
-        -- Active* columns are NULL once unlinked, so only active links must be unique: one per game per member.
         UNIQUE KEY UQ_HabboLinks_ActiveHabboAccount (HotelCode, ActiveHabboUniqueId),
         KEY IX_HabboLinks_DiscordUserHistory (DiscordUserId, LinkedTimestamp),
         KEY IX_HabboLinks_HabboAccountHistory (HotelCode, HabboUniqueId, LinkedTimestamp),
@@ -38,7 +32,6 @@ export const Tables = [
         HabboUniqueId VARCHAR(64) NOT NULL,
         HabboUsername VARCHAR(64) NOT NULL,
         HotelCode VARCHAR(16) NOT NULL,
-        -- HMAC of the code; the plaintext code is never stored.
         VerificationCodeHash CHAR(64) NOT NULL,
         CreatedTimestamp DATETIME(3) NOT NULL,
         ExpiresTimestamp DATETIME(3) NOT NULL,
@@ -93,7 +86,6 @@ export const Tables = [
         CONSTRAINT FK_HabboLinkAuditLogs_Link FOREIGN KEY (LinkId) REFERENCES HabboLinks (LinkId)`,
     ],
     [
-        // Each audit event is delivered once per logging channel.
         'AuditNotificationOutbox',
         `NotificationId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         AuditLogId BIGINT UNSIGNED NOT NULL,
@@ -114,14 +106,12 @@ export const Tables = [
         CONSTRAINT FK_AuditNotificationOutbox_AuditLog FOREIGN KEY (AuditLogId) REFERENCES HabboLinkAuditLogs (AuditLogId)`,
     ],
     [
-        // The Discord servers the bot serves: one HABBO and/or one ORIGINS. Filled in on the admin page.
         'Guilds',
         `GuildUuid CHAR(36) NOT NULL,
         GuildType VARCHAR(16) NOT NULL,
         Name VARCHAR(100) NOT NULL,
         GuildId VARCHAR(20) NOT NULL,
         CreatedTimestamp DATETIME(3) NOT NULL,
-        -- Force verified members' nicknames to "<HabboUsername> (<Hotel>)" in this server.
         EnforceNicknames TINYINT(1) NOT NULL DEFAULT 1,
         PRIMARY KEY (GuildUuid),
         UNIQUE KEY UQ_Guilds_GuildId (GuildId),
@@ -148,7 +138,6 @@ export const Tables = [
         CONSTRAINT FK_GuildLogChannels_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Channels (or categories) that a server's logs ignore. Everything else is logged.
         'GuildLogExclusions',
         `GuildLogExclusionId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         GuildUuid CHAR(36) NOT NULL,
@@ -160,7 +149,6 @@ export const Tables = [
         CONSTRAINT FK_GuildLogExclusions_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // The roles a member had when they left a server, given back when they rejoin.
         'MemberRoleSnapshots',
         `GuildUuid CHAR(36) NOT NULL,
         DiscordUserId VARCHAR(20) NOT NULL,
@@ -170,7 +158,6 @@ export const Tables = [
         CONSTRAINT FK_MemberRoleSnapshots_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Messages sent to the mod team with /dmmod. ReplyDelivered is false when the member's DMs were closed.
         'DmModMessages',
         `DmModId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         GuildUuid CHAR(36) NOT NULL,
@@ -192,8 +179,6 @@ export const Tables = [
         CONSTRAINT FK_DmModMessages_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Mod mail: a member DMs the bot and talks to one server's mod team through a forum thread.
-        // OpenDiscordUserId is set only while the mail is open, so a member has at most one open mail.
         'ModMails',
         `ModMailId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         GuildUuid CHAR(36) NOT NULL,
@@ -217,7 +202,6 @@ export const Tables = [
         CONSTRAINT FK_ModMails_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Members banned from contacting one server's mod team (mod mail and /dmmod). ExpiresTimestamp is NULL for a permanent ban.
         'ModMailBans',
         `GuildUuid CHAR(36) NOT NULL,
         DiscordUserId VARCHAR(20) NOT NULL,
@@ -228,7 +212,6 @@ export const Tables = [
         CONSTRAINT FK_ModMailBans_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Moderation history recorded from /modpanel, per server. A forgiven sanction is kept for the record but no longer counts.
         'ModSanctions',
         `SanctionId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         GuildUuid CHAR(36) NOT NULL,
@@ -248,7 +231,6 @@ export const Tables = [
         CONSTRAINT FK_ModSanctions_Guild FOREIGN KEY (GuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Notes moderators add from /modpanel. A GLOBAL note is seen in every server; a SERVER note only where it was added.
         'ModNotes',
         `NoteId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         DiscordUserId VARCHAR(20) NOT NULL,
@@ -264,7 +246,6 @@ export const Tables = [
         CONSTRAINT FK_ModNotes_Guild FOREIGN KEY (OriginGuildUuid) REFERENCES Guilds (GuildUuid)`,
     ],
     [
-        // Where each note was logged, per server, so a server's moderators can be linked to their own copy.
         'ModNoteLogMessages',
         `NoteId BIGINT UNSIGNED NOT NULL,
         GuildUuid CHAR(36) NOT NULL,
@@ -275,13 +256,8 @@ export const Tables = [
     ],
 ];
 
-// Columns added to a table after it was first released. New databases get them from the table definitions above;
-// existing ones get them here. Each is ADD COLUMN IF NOT EXISTS, so it is safe to run on every start.
-// To add a column: put it in the table definition above AND list it here.
 export const AddedColumns = [['Guilds', "EnforceNicknames TINYINT(1) NOT NULL DEFAULT 1 AFTER CreatedTimestamp"]];
 
-// Creates the database named in DB_NAME if it does not exist yet. Skipped quietly when the database user
-// may not create databases, as long as the database is already there (the pool's first query will say if not).
 export async function EnsureDatabaseExists(DatabaseConfig, { Logger } = {}) {
     const Connection = await mysql.createConnection({
         host: DatabaseConfig.Host,
@@ -291,7 +267,6 @@ export async function EnsureDatabaseExists(DatabaseConfig, { Logger } = {}) {
         connectTimeout: 10000,
     });
     try {
-        // DB_NAME is validated as letters, digits and underscores, so it is safe to put in backticks.
         const [Result] = await Connection.query(`CREATE DATABASE IF NOT EXISTS \`${DatabaseConfig.Name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin`);
         if (Result.warningStatus === 0) {
             Logger?.Info(`Created database ${DatabaseConfig.Name}.`);
@@ -306,18 +281,15 @@ export async function EnsureDatabaseExists(DatabaseConfig, { Logger } = {}) {
     }
 }
 
-// Creates any missing table and adds any missing column from AddedColumns. Never changes or drops anything else.
 export async function CreateSchema(Pool, { Logger } = {}) {
     const Connection = await Pool.getConnection();
     try {
-        // Stops two bot processes creating tables at the same time.
         const [LockRows] = await Connection.query('SELECT GET_LOCK(?, 30) AS Acquired', [SchemaLockName]);
         if (LockRows[0].Acquired !== 1) {
             throw new Error('Could not acquire the schema lock (another instance may be setting up the database).');
         }
         try {
             const [ExistingRows] = await Connection.query('SELECT TABLE_NAME AS TableName FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()');
-            // Lower-cased because Windows servers store table names in lower case.
             const Existing = new Set(ExistingRows.map((Row) => Row.TableName.toLowerCase()));
             const Created = [];
             for (const [TableName, Definition] of Tables) {
@@ -329,7 +301,6 @@ export async function CreateSchema(Pool, { Logger } = {}) {
             }
             for (const [TableName, ColumnDefinition] of AddedColumns) {
                 const [Result] = await Connection.query(`ALTER TABLE ${TableName} ADD COLUMN IF NOT EXISTS ${ColumnDefinition}`);
-                // MariaDB returns a "column already exists" note when there was nothing to add.
                 if (Result.warningStatus === 0) {
                     Created.push(`${TableName}.${ColumnDefinition.split(' ')[0]}`);
                 }

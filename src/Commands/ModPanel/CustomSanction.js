@@ -19,14 +19,12 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// What each kind needs Discord to allow.
 const KindRules = Object.freeze({
     [CustomSanctionKinds.Mute]: { Allowed: (Member) => Member.moderatable, Verb: 'mute', Permission: 'Timeout Members' },
     [CustomSanctionKinds.Kick]: { Allowed: (Member) => Member.kickable, Verb: 'kick', Permission: 'Kick Members' },
     [CustomSanctionKinds.Ban]: { Allowed: (Member) => Member.bannable, Verb: 'ban', Permission: 'Ban Members' },
 });
 
-// 🛠️ Custom Sanction (Moderate User menu): choose mute, kick or ban.
 export async function ShowCustomTypeMenu(Interaction, Context, { TargetId }) {
     const Target = await Interaction.client.users.fetch(TargetId).catch(() => null);
     if (!Target) {
@@ -36,7 +34,6 @@ export async function ShowCustomTypeMenu(Interaction, Context, { TargetId }) {
     await Interaction.reply(EphemeralView(BuildCustomTypeView(Interaction.user.id, Target)));
 }
 
-// A mute goes straight to its form; a kick or ban asks "Are you sure?" first.
 export async function HandleCustomType(Interaction, Context, { TargetId }) {
     const Kind = Interaction.values?.[0];
     if (!KindRules[Kind]) {
@@ -54,7 +51,6 @@ export async function HandleCustomType(Interaction, Context, { TargetId }) {
     await Interaction.update(BuildCustomConfirmView(Interaction.user.id, Target, Kind));
 }
 
-// "Yes": asks for the reasons.
 export async function HandleCustomConfirm(Interaction, Context, { TargetId, Arguments }) {
     const Kind = Arguments[1];
     if (Kind !== CustomSanctionKinds.Kick && Kind !== CustomSanctionKinds.Ban) {
@@ -78,8 +74,6 @@ async function SendDm(Member, Context, ViewData) {
     }
 }
 
-// The form was sent: the sanction is applied, the member DMed, it is logged in Mod Actions (and the user banned channel
-// for a ban) and recorded as a custom sanction, which never counts towards the other sanctions' steps.
 export async function HandleCustomSanctionForm(Interaction, Context, { TargetId, Arguments }) {
     const Kind = Arguments[1];
     const Rules = KindRules[Kind];
@@ -90,7 +84,6 @@ export async function HandleCustomSanctionForm(Interaction, Context, { TargetId,
     const PrivateReason = Field(ReasonInputs.PrivateReason);
     const PublicReason = Field(ReasonInputs.PublicReason);
     const MessageLink = Field(ReasonInputs.MessageLink);
-    // Sent from the chooser or "Are you sure?" message: that message becomes the result.
     if (Interaction.isFromMessage?.()) {
         await Interaction.deferUpdate();
     } else {
@@ -151,7 +144,6 @@ export async function HandleCustomSanctionForm(Interaction, Context, { TargetId,
         Delivered = await SendDm(Member, Context, DmView);
         LogMessage = await Log(LogChannelTypes.ModActions, Delivered);
     } else {
-        // DMed while they still share a server with the bot, and logged before they are removed.
         Delivered = await SendDm(Member, Context, DmView);
         const ChannelTypes = Kind === CustomSanctionKinds.Ban ? [LogChannelTypes.BanLog, LogChannelTypes.ModActions] : [LogChannelTypes.ModActions];
         const Posted = await Promise.all(ChannelTypes.map((ChannelType) => Log(ChannelType, Delivered)));
@@ -160,7 +152,6 @@ export async function HandleCustomSanctionForm(Interaction, Context, { TargetId,
             await (Kind === CustomSanctionKinds.Ban ? Member.ban({ reason: AuditReason }) : Member.kick(AuditReason));
         } catch (RemovalError) {
             Context.Logger.Warn('Custom removal failed', { GuildId: Interaction.guildId, DiscordUserId: TargetId, Kind, Error: RemovalError });
-            // The logs said they were removed; take them back down.
             await Promise.all(Posted.filter(Boolean).map((Message) => Message.delete().catch(() => {})));
             await Fail(`Discord refused the ${Rules.Verb}. Please try again or contact Habbo Staff.`);
             return;

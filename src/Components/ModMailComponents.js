@@ -47,7 +47,6 @@ function ModerationTeamFooter(GuildType) {
     return GuildType === Games.Origins ? 'Habbo Hotel: Origins Moderation Team' : 'Habbo Hotel Moderation Team';
 }
 
-// Sent when a member DMs the bot without an open mod mail.
 export function BuildOpenModMailPromptView(User, BotAvatarUrl) {
     const Embed = new EmbedBuilder()
         .setColor(Purple)
@@ -71,7 +70,6 @@ export function BuildOpenModMailPromptView(User, BotAvatarUrl) {
     return View(Embed, [Row]);
 }
 
-// Teams: [{ GuildId, GuildType }] for every server with a mod mail forum.
 export function BuildTeamSelectView(OwnerDiscordUserId, Teams) {
     const Embed = new EmbedBuilder()
         .setColor(Purple)
@@ -92,7 +90,6 @@ export function BuildTeamSelectView(OwnerDiscordUserId, Teams) {
     return View(Embed, [Row]);
 }
 
-// Sent instead of the prompt when the member is banned from contacting every team.
 export function BuildModMailRestrictedView(User, BotAvatarUrl) {
     const Embed = new EmbedBuilder()
         .setColor(Colours.Danger)
@@ -172,7 +169,6 @@ export function BuildModMailOpenedView(ModMail, BotAvatarUrl) {
     return View(Embed);
 }
 
-// The first message of the forum thread. OtherTeamGuildType is set while the mail can still be passed on.
 export function BuildModMailThreadCard(ModMail, User, { PingRoleId = null, PassedFromGuildType = null, OtherTeamGuildType = null } = {}) {
     const IsOpen = ModMail.Status === 'OPEN';
     const Fields = [
@@ -211,8 +207,6 @@ export function BuildModMailThreadCard(ModMail, User, { PingRoleId = null, Passe
     return { components: Components, flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [], roles: PingRoleId ? [PingRoleId] : [] } };
 }
 
-// A moderator's message, sent to the member without the moderator's name.
-// Files: [{ FileName, IsMedia, IsSpoiler }] uploaded with the message (see SaveAttachments).
 export function BuildModReplyDmView(Content, GuildType, Files = []) {
     const Quoted = Content
         ? Content.split('\n')
@@ -229,7 +223,6 @@ export function BuildModReplyDmView(Content, GuildType, Files = []) {
     return Result;
 }
 
-// Components V2 messages only show files that a component points at.
 export function AddFileComponents(Container, Files) {
     const Media = Files.filter((File) => File.IsMedia);
     const Others = Files.filter((File) => !File.IsMedia);
@@ -274,7 +267,6 @@ export function BuildModMailConfirmView(Description, ConfirmCustomId, CancelCust
     return View(Embed, [Row]);
 }
 
-// Moderator confirmations: successes self-destruct, problems stay so they can be read.
 export function BuildModMailResultView(Title, Description, { Success = true } = {}) {
     const Embed = new EmbedBuilder()
         .setTitle(Title)

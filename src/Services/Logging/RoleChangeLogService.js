@@ -26,9 +26,7 @@ export class RoleChangeLogService {
         this.GuildLogService = GuildLogService;
     }
 
-    // One card for the roles added and another for the roles removed, each in its own log channel.
     async HandleMemberUpdate(OldMember, NewMember) {
-        // Without the old member there is nothing to compare against.
         if (OldMember.partial) {
             return;
         }

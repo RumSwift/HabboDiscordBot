@@ -11,14 +11,12 @@ async function Main() {
         Config = LoadEnvironment();
     } catch (LoadError) {
         if (LoadError instanceof ConfigurationError) {
-            // Messages only contain variable names, never values.
             console.error(LoadError.message);
             process.exit(1);
         }
         throw LoadError;
     }
 
-    // Secret values are masked even inside third-party error messages.
     SetLogLevel(Config.LogLevel);
     RegisterSecretValues([Config.Database.User, Config.Database.Password, Config.Discord.Token, Config.Api.InternalApiKey, Config.Verification.CodeSecret, Config.Admin.Password].filter(Boolean));
 
@@ -38,7 +36,6 @@ async function Shutdown(SignalName) {
     IsShuttingDown = true;
     Logger.Info(`Received ${SignalName}; shutting down...`);
 
-    // Force exit if shutdown hangs for some reason.
     setTimeout(() => {
         Logger.Error('Shutdown took too long; forcing exit.');
         process.exit(1);

@@ -13,7 +13,6 @@ import {
 import { HandleConfirmUnlink, HandleUnlink, HandleUnlinkGame } from '../Flows/UnlinkFlow.js';
 
 export default {
-    // Discord only allows lowercase command names, so "VerifyHabbo" is registered as "verifyhabbo".
     Data: new SlashCommandBuilder()
         .setName(VerifyCommandName)
         .setDescription('Link your Discord account to your Habbo and Habbo Origins accounts.')

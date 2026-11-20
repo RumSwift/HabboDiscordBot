@@ -27,11 +27,8 @@ export const DurationInputId = 'Duration';
 const MinuteMs = 60 * 1000;
 const UnitMs = Object.freeze({ m: MinuteMs, h: 60 * MinuteMs, d: 24 * 60 * MinuteMs });
 const UnitNames = Object.freeze({ d: ['Day', 'Days'], h: ['Hour', 'Hours'], m: ['Minute', 'Minutes'] });
-// Discord's longest timeout.
 export const MaxMuteMs = 28 * UnitMs.d;
 
-// "5m", "3h", "2d" or combinations such as "1d12h" or "1h 30m". Returns { Ms, Label } (e.g. "1 Day 12 Hours"),
-// or null when it cannot be read or is not between 1 minute and 28 days.
 export function ParseMuteDuration(Text) {
     const Compact = String(Text ?? '').toLowerCase().replace(/\s+/g, '');
     if (!/^(\d+[mhd])+$/.test(Compact)) {
@@ -52,7 +49,6 @@ export function ParseMuteDuration(Text) {
     return { Ms, Label };
 }
 
-// What is recorded and shown, e.g. "Muted for 2 Days", "User Kicked", "User Banned".
 export function CustomPunishment(Kind, Duration = null) {
     if (Kind === CustomSanctionKinds.Mute) {
         return `Muted for ${Duration.Label}`;
@@ -60,7 +56,6 @@ export function CustomPunishment(Kind, Duration = null) {
     return Kind === CustomSanctionKinds.Kick ? 'User Kicked' : 'User Banned';
 }
 
-// 🛠️ Custom Sanction: choose mute, kick or ban.
 export function BuildCustomTypeView(OwnerId, Target) {
     const Embed = new EmbedBuilder()
         .setTitle('🛠️ Custom Sanction')
@@ -83,7 +78,6 @@ export function BuildCustomTypeView(OwnerId, Target) {
     return { ...View(Embed, [new ActionRowBuilder().addComponents(Menu)]), allowedMentions: { parse: [] } };
 }
 
-// "Are you sure?" before a custom kick or ban. The reasons are asked for after "Yes".
 export function BuildCustomConfirmView(OwnerId, Target, Kind) {
     const Verb = Kind === CustomSanctionKinds.Kick ? 'kick' : 'ban';
     const Embed = new EmbedBuilder()
@@ -112,7 +106,6 @@ export function BuildCustomConfirmView(OwnerId, Target, Kind) {
     return { ...View(Embed, [Row]), allowedMentions: { parse: [] } };
 }
 
-// The reasons form, with the mute length first for a mute.
 export function BuildCustomSanctionModal(OwnerId, TargetId, Kind) {
     const Rows = [];
     if (Kind === CustomSanctionKinds.Mute) {
@@ -129,7 +122,6 @@ export function BuildCustomSanctionModal(OwnerId, TargetId, Kind) {
         .addComponents(...Rows);
 }
 
-// The DM the member receives.
 export function BuildCustomSanctionDmView(UserId, GuildType, PublicReason, Kind, Duration = null) {
     const Outcomes = {
         [CustomSanctionKinds.Mute]: `**You have been muted for ${Duration?.Label.toLowerCase()}.**`,

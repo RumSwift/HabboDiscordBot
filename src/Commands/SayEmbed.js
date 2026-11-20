@@ -4,7 +4,6 @@ import { AuditPermission } from '../Flows/AuditFlow.js';
 import { ExecuteSayEmbedCommand, HandleSayEmbedModal, HandleSayEmbedRetry } from '../Flows/SayFlow.js';
 
 export default {
-    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
     StaffOnly: true,
     Data: new SlashCommandBuilder()
         .setName('sayembed')

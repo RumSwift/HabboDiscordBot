@@ -17,19 +17,15 @@ import { ScheduleSelfDestruct } from './FlowHelpers.js';
 
 const SendPermissions = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
 
-// Typing \n in the message box gives a new line.
 export function FormatSayText(Text) {
     return Text.replaceAll('\\n', '\n');
 }
 
-// Only users and roles tagged explicitly (<@id>, <@!id>, <@&id>) ping; @everyone and @here never do.
 export function BuildSayMentions(Text) {
     const Collect = (Pattern) => [...new Set([...Text.matchAll(Pattern)].map((Match) => Match[1]))].slice(0, 100);
     return { parse: [], users: Collect(/<@!?(\d{17,20})>/g), roles: Collect(/<@&(\d{17,20})>/g) };
 }
 
-// Staff can only post where they could post themselves, and the bot must be able to as well.
-// Channel is the target picked on the command (or the current channel); a modal passes the one picked earlier.
 async function ResolveSayChannel(Interaction, CommandName, { Channel = Interaction.options?.getChannel('channel') ?? Interaction.channel, BotPermissions = SendPermissions } = {}) {
     if (!HasAuditPermission(Interaction)) {
         await Interaction.reply(EphemeralView(BuildAuditPermissionDeniedView()));
@@ -71,15 +67,12 @@ export async function ExecuteSayCommand(Interaction, Context) {
     await FinishSay(Interaction, Context, Sent, 'HandleSay');
 }
 
-// The bot needs Embed Links as well to post an embed, and Attach Files to re-upload an uploaded image.
 const EmbedPermissions = [...SendPermissions, PermissionFlagsBits.EmbedLinks];
 const UploadPermissions = [...EmbedPermissions, PermissionFlagsBits.AttachFiles];
 
-// Discord's upload limit for bots in servers without boosts.
 export const MaxEmbedImageBytes = 10 * 1024 * 1024;
 const ImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 
-// Accepts "#5865F2" or "5865F2". Returns null when the text is not a hex colour.
 export function ParseEmbedColour(Text) {
     const Match = /^#?([0-9a-f]{6})$/i.exec(String(Text ?? '').trim());
     return Match ? Number.parseInt(Match[1], 16) : null;
@@ -93,7 +86,6 @@ function IsWebUrl(Text) {
     }
 }
 
-// The uploaded file's extension, or null when it is not an image Discord can show in an embed.
 function ImageExtension(Attachment) {
     if (Attachment.contentType && !Attachment.contentType.startsWith('image/')) {
         return null;
@@ -106,9 +98,7 @@ function ImageExtension(Attachment) {
     return ImageExtensions.includes(FromType) ? FromType : null;
 }
 
-// What the command options ask for, checked before the modal opens. Returns { Error } when something is wrong.
 export function ReadSayEmbedOptions(Interaction, Channel) {
-    // An image link always wins over an upload.
     const ImageLink = Interaction.options.getString('image_link')?.trim() || null;
     if (ImageLink && !IsWebUrl(ImageLink)) {
         return { Error: 'The image link must start with http:// or https://.' };
@@ -133,8 +123,6 @@ export function ReadSayEmbedOptions(Interaction, Channel) {
     return { Options: { ImageLink, ImageUpload, Tag: Tag.Tag } };
 }
 
-// The ping above the embed: a role, @everyone (picked as the @everyone role) or @here.
-// Returns { Tag: { Content, AllowedMentions } | null } or { Error }.
 function ReadSayEmbedTag(Interaction, Channel) {
     const Role = Interaction.options.getRole('tag');
     const Here = Interaction.options.getBoolean?.('tag_here') === true;
@@ -147,7 +135,6 @@ function ReadSayEmbedTag(Interaction, Channel) {
 
     const IsEveryone = Here || Role.id === Interaction.guildId;
     const Label = Here ? '@here' : IsEveryone ? '@everyone' : roleMention(Role.id);
-    // @everyone, @here and roles that are not mentionable only ping with "Mention @everyone, @here and All Roles".
     const CanPing = (Permissions) => Boolean((!IsEveryone && Role.mentionable) || Permissions?.has(PermissionFlagsBits.MentionEveryone));
     if (!CanPing(Interaction.member?.permissionsIn?.(Channel))) {
         return { Error: `You cannot ping ${Label} in that channel yourself, so the bot will not either.` };
@@ -165,7 +152,6 @@ function ReadSayEmbedTag(Interaction, Channel) {
     return { Tag: { Content: roleMention(Role.id), AllowedMentions: { parse: [], roles: [Role.id] } } };
 }
 
-// Options waiting for the modal, which can only carry a short ID. Kept in memory for 15 minutes.
 export class PendingSayEmbeds {
     constructor({ Now = () => Date.now(), LifetimeMs = 15 * 60 * 1000 } = {}) {
         this.Entries = new Map();
@@ -189,7 +175,6 @@ export class PendingSayEmbeds {
         return Entry && Entry.ExpiresMs > this.Now() ? Entry.Value : null;
     }
 
-    // Keeps what was typed, so the form can be reopened with it after a mistake.
     Update(Key, Changes) {
         const Entry = this.Entries.get(Key);
         if (Entry) {
@@ -197,7 +182,6 @@ export class PendingSayEmbeds {
         }
     }
 
-    // Each form is sent once.
     Take(Key) {
         const Value = this.Peek(Key);
         this.Entries.delete(Key);
@@ -220,7 +204,6 @@ export function BuildSayEmbed({ Title, Content, Colour = ParseEmbedColour(Defaul
 
 const ExpiredFormView = () => EphemeralView(BuildSayFailedView(null, 'This form has expired. Run /sayembed again.'));
 
-// /sayembed checks where it will post and the options, then opens a modal for the embed's title, content and colour.
 export async function ExecuteSayEmbedCommand(Interaction, Context, { Store = PendingSayEmbedStore } = {}) {
     const Upload = !Interaction.options.getString('image_link') && Interaction.options.getAttachment('image_upload');
     const Channel = await ResolveSayChannel(Interaction, 'sayembed', { BotPermissions: Upload ? UploadPermissions : EmbedPermissions });
@@ -236,7 +219,6 @@ export async function ExecuteSayEmbedCommand(Interaction, Context, { Store = Pen
     await Interaction.showModal(BuildSayEmbedModal(Interaction.user.id, Key, Channel.name));
 }
 
-// The Try Again button: reopens the form with what was typed.
 export async function HandleSayEmbedRetry(Interaction, Context, { Arguments, Store = PendingSayEmbedStore }) {
     const Pending = Store.Peek(Arguments[0]);
     if (!Pending) {
@@ -256,7 +238,6 @@ export async function HandleSayEmbedModal(Interaction, Context, { Arguments, Sto
     const Title = Interaction.fields.getTextInputValue(SayEmbedTitleInputId).trim();
     const Content = Interaction.fields.getTextInputValue(SayEmbedContentInputId);
     const ColourText = Interaction.fields.getTextInputValue(SayEmbedColourInputId).trim();
-    // An empty colour box means Habbo orange.
     const Colour = ParseEmbedColour(ColourText || DefaultSayEmbedColour);
     if (Colour === null) {
         Store.Update(Key, { Draft: { Title, Content, Colour: ColourText } });
@@ -265,13 +246,11 @@ export async function HandleSayEmbedModal(Interaction, Context, { Arguments, Sto
     }
 
     const Target = Interaction.guild?.channels?.cache?.get(Pending.ChannelId) ?? (await Interaction.guild?.channels?.fetch(Pending.ChannelId).catch(() => null));
-    // Checked again: permissions may have changed while the modal was open.
     const Channel = await ResolveSayChannel(Interaction, 'sayembed', { Channel: Target, BotPermissions: Pending.ImageUpload ? UploadPermissions : EmbedPermissions });
     Store.Take(Key);
     if (!Channel) {
         return;
     }
-    // The uploaded file is sent with the message, so the embed keeps its image after Discord's upload link expires.
     const Files = Pending.ImageUpload ? [{ attachment: Pending.ImageUpload.Url, name: Pending.ImageUpload.FileName }] : [];
     const Embed = BuildSayEmbed({
         Title,
@@ -281,7 +260,6 @@ export async function HandleSayEmbedModal(Interaction, Context, { Arguments, Sto
     });
 
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    // The tag goes above the embed, because mentions inside an embed never ping. Nothing else pings.
     const Sent = await Channel.send({
         content: Pending.Tag?.Content,
         embeds: [Embed],

@@ -15,12 +15,10 @@ export function NotFoundHandler(Request, Response) {
 }
 
 export function CreateErrorHandler(Logger) {
-    // eslint-disable-next-line no-unused-vars
     return function ErrorHandler(RequestError, Request, Response, Next) {
         if (RequestError instanceof ApiError) {
             return Response.status(RequestError.HttpStatus).json({ Success: false, Error: { Code: RequestError.Code, Message: RequestError.message } });
         }
-        // Errors raised by express.json() (bad JSON, body too large).
         if (RequestError?.type === 'entity.too.large') {
             return Response.status(413).json({ Success: false, Error: { Code: 'PAYLOAD_TOO_LARGE', Message: 'Request body is too large.' } });
         }

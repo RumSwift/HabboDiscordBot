@@ -6,12 +6,10 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// 💬 Send DM: asks for the message first.
 export async function ShowDirectMessageModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildDirectMessageModal(Interaction.user.id, TargetId));
 }
 
-// The form was sent: DM the member and log it in this server's direct message log.
 export async function HandleDirectMessageForm(Interaction, Context, { TargetId }) {
     const MessageText = Interaction.fields.getTextInputValue(DirectMessageInputId).trim();
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -23,7 +21,6 @@ export async function HandleDirectMessageForm(Interaction, Context, { TargetId }
     }
     const Guild = await Context.Services.GuildConfigurationRepository.FindGuildByGuildId(Interaction.guildId);
 
-    // Members with DMs closed still get the message logged, with a note.
     let Delivered = true;
     try {
         await Member.user.send(BuildDirectMessageDmView(TargetId, Guild?.GuildType, MessageText));

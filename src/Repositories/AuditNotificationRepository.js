@@ -23,7 +23,6 @@ export class AuditNotificationRepository {
     }
 
     async ClaimDueNotifications({ Now, Limit = 10, LockDurationMs = 60000 }) {
-        // A single atomic UPDATE claims the rows, so two workers never get the same one.
         const LockToken = randomUUID();
         const LockedUntil = new Date(Now.getTime() + LockDurationMs);
 

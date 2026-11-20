@@ -29,7 +29,6 @@ function Thumbnail(Embed, Target) {
     return AvatarUrl ? Embed.setThumbnail(AvatarUrl) : Embed;
 }
 
-// The panel /modmail ban opens: duration choices when not banned, Unban / Extend when banned.
 export function BuildBanPanelView(OwnerDiscordUserId, Target, Ban) {
     const Name = escapeMarkdown(Target.username);
     if (!Ban) {
@@ -58,7 +57,6 @@ export function BuildBanPanelView(OwnerDiscordUserId, Target, Ban) {
             { name: 'Ends', value: FormatBanEnd(Ban.ExpiresTimestamp) },
         );
     const Buttons = [new ButtonBuilder().setCustomId(BuildCustomId(ModMailBanActions.Unban, OwnerDiscordUserId, Target.id)).setLabel('Unban').setStyle(ButtonStyle.Success)];
-    // A permanent ban has nothing to extend.
     if (Ban.ExpiresTimestamp) {
         Buttons.push(new ButtonBuilder().setCustomId(BuildCustomId(ModMailBanActions.ExtendMenu, OwnerDiscordUserId, Target.id)).setLabel('Extend').setStyle(ButtonStyle.Primary));
     }
@@ -82,7 +80,6 @@ export function BuildExtendPanelView(OwnerDiscordUserId, Target, Ban) {
     return View(Thumbnail(Embed, Target), [Row]);
 }
 
-// Successes self-destruct, problems stay so they can be read.
 export function BuildBanResultView(Title, Description, { Success = true } = {}) {
     const Embed = new EmbedBuilder()
         .setTitle(Title)

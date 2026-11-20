@@ -39,7 +39,6 @@ export function BuildUnlinkConfirmationView({ OwnerDiscordUserId, ActiveLink }) 
         .setColor(Colours.Danger)
         .setThumbnail(Thumbnails.UnlinkConfirmation);
 
-    // The LinkId in the button ID means a stale confirmation can never unlink a newer link.
     const Row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(BuildCustomId('ConfirmUnlink', OwnerDiscordUserId, ActiveLink.LinkId)).setLabel('Confirm Unlink').setStyle(ButtonStyle.Danger),
         BackButton(OwnerDiscordUserId),

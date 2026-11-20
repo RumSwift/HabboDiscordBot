@@ -2,8 +2,6 @@ import { ChannelType } from 'discord.js';
 import { DmModPingRoleType, HeadModRoleType, LogChannelTypes } from '../Repositories/GuildConfigurationRepository.js';
 import { GameLabels, Games, GetHotelsForGame } from '../Utils/HotelConfiguration.js';
 
-// Everything that can be set per server on the admin page. Add a log channel or role type here to show it on the page.
-
 const TextChannels = [ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.AnnouncementThread];
 
 export const ChannelSettings = Object.freeze(
@@ -34,7 +32,6 @@ export function GetRoleSettings(Game) {
     ];
 }
 
-// Channels a log exclusion can point at: any channel a message can be sent in, or a whole category.
 export const ExclusionChannelTypes = Object.freeze([...TextChannels, ChannelType.GuildVoice, ChannelType.GuildForum, ChannelType.GuildCategory]);
 
 export const ServerTypes = Object.freeze(

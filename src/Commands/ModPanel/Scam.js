@@ -9,7 +9,6 @@ import { ClosePanel } from './OpenPanels.js';
 
 const DeleteMessageSeconds = 7 * 24 * 60 * 60;
 
-// The configured server of the other game (Habbo <-> Origins), or null.
 async function FindServers(Context, GuildId) {
     const Guilds = await Context.Services.GuildConfigurationRepository.GetGuilds();
     const Source = Guilds.find((Guild) => Guild.GuildId === GuildId) ?? null;
@@ -17,7 +16,6 @@ async function FindServers(Context, GuildId) {
     return { Source, Other };
 }
 
-// 🐟 Scam/Phishing (Ban): asks the moderator to confirm first.
 export async function HandleScamButton(Interaction, Context, { TargetId }) {
     const Target = await Interaction.client.users.fetch(TargetId).catch(() => null);
     if (!Target) {
@@ -33,7 +31,6 @@ export async function HandleScamCancel(Interaction, Context) {
     ScheduleSelfDestruct(Interaction, Context.Logger);
 }
 
-// Logs the ban in the server's Mod Actions and ban log, then records it in the member's history there.
 async function LogAndRecord(Context, { GuildId, Target, Moderator, DisplayName, BannedInName = null }) {
     const Log = (ChannelType) =>
         Context.Services.ModActionLogService.LogScamBan({ GuildId, ChannelType, Target, Moderator, DisplayName, BannedInName }).catch((LogError) => {
@@ -56,7 +53,6 @@ async function LogAndRecord(Context, { GuildId, Target, Moderator, DisplayName, 
     return LogUrl;
 }
 
-// Bans from the other game's server too. Returns a line for the moderator's reply.
 async function BanInOtherServer(Interaction, Context, { Other, SourceName, Target, Moderator }) {
     const OtherName = ServerName(Other.GuildType);
     const Guild = await Interaction.client.guilds.fetch(Other.GuildId).catch(() => null);
@@ -73,12 +69,10 @@ async function BanInOtherServer(Interaction, Context, { Other, SourceName, Targe
         Context.Logger.Warn('Cross-server scam ban failed', { GuildId: Other.GuildId, DiscordUserId: Target.id, Error: BanError });
         return `⚠️ **${OtherName}:** Discord refused the ban. Please ban them there by hand.`;
     }
-    // No log link: moderators of this server usually cannot see the other server's logs.
     await LogAndRecord(Context, { GuildId: Other.GuildId, Target, Moderator, DisplayName: Member?.displayName ?? Target.username, BannedInName: SourceName });
     return `✅ **${OtherName}:** banned`;
 }
 
-// "Yes, Ban User": bans here and in the other game's server, logging in both.
 export async function HandleScamConfirm(Interaction, Context, { TargetId }) {
     await ShowLoading(Interaction, 'Banning...');
     const Fail = (Description) => Interaction.editReply(BuildModPanelResultView('Scam/Phishing Ban Failed', Description, { Success: false }));

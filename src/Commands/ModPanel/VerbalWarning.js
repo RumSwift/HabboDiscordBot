@@ -7,13 +7,10 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// ⚠️ Verbal Warning (Moderate User menu): asks for the reasons first.
 export async function ShowVerbalWarningModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildVerbalWarningModal(Interaction.user.id, TargetId));
 }
 
-// A warned member who is muted (e.g. by an Emergency Mute) has the mute lifted.
-// Returns true when lifted, false when it could not be, null when they were not muted.
 async function RemoveMute(Member, Moderator, Context) {
     if (!Member.isCommunicationDisabled?.()) {
         return null;
@@ -27,7 +24,6 @@ async function RemoveMute(Member, Moderator, Context) {
     }
 }
 
-// The form was sent: lift any mute, DM the member, log it in this server's Mod Actions and record it in their history.
 export async function HandleVerbalWarningForm(Interaction, Context, { TargetId }) {
     const Field = (Id) => Interaction.fields.getTextInputValue(Id).trim();
     const PrivateReason = Field(ReasonInputs.PrivateReason);
@@ -44,7 +40,6 @@ export async function HandleVerbalWarningForm(Interaction, Context, { TargetId }
     const Guild = await Context.Services.GuildConfigurationRepository.FindGuildByGuildId(Interaction.guildId);
     const MuteRemoved = await RemoveMute(Member, Moderator, Context);
 
-    // Members with DMs closed still get the warning on record.
     let Delivered = true;
     try {
         await Member.user.send(BuildVerbalWarningDmView(TargetId, Guild?.GuildType, PublicReason));

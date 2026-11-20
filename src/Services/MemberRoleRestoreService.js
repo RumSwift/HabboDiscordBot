@@ -1,8 +1,5 @@
 const RestoreReason = 'Restoring roles after rejoining the server';
 
-// Remembers a member's roles when they leave a configured server and gives them back when they rejoin.
-// Verification roles (GuildRoles) are left out: the Habbo link decides those, so an unlinked member
-// does not get a verified role back.
 export class MemberRoleRestoreService {
     constructor({ SnapshotRepository, GuildConfigurationRepository, Logger, Clock = () => new Date() }) {
         this.SnapshotRepository = SnapshotRepository;
@@ -12,7 +9,6 @@ export class MemberRoleRestoreService {
     }
 
     async HandleMemberLeave(Member) {
-        // Without the cached member there is no role list to save.
         if (Member.partial || Member.user?.bot) {
             return false;
         }
@@ -47,7 +43,6 @@ export class MemberRoleRestoreService {
         const Skipped = [];
         for (const RoleId of Snapshot.RoleIds) {
             const Role = Member.guild.roles.cache.get(RoleId);
-            // Deleted roles, integration roles and roles above the bot can't be given.
             if (Role && !Role.managed && Role.editable) {
                 Restorable.push(RoleId);
             } else {
@@ -59,7 +54,6 @@ export class MemberRoleRestoreService {
         }
 
         if (Restorable.length > 0) {
-            // Throws on failure, leaving the snapshot so nothing is lost.
             await Member.roles.add(Restorable, RestoreReason);
             this.Logger?.Info('Restored roles of rejoining member', { DiscordUserId: Member.id, GuildId, RoleCount: Restorable.length });
         }

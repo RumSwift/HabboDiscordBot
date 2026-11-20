@@ -4,19 +4,15 @@ import { ScheduleSelfDestruct } from '../../Flows/FlowHelpers.js';
 import { NoteScopes } from '../../Repositories/ModNoteRepository.js';
 import { ClosePanel } from './OpenPanels.js';
 
-// 📝 Add Note: asks for the note first.
 export async function ShowAddNoteModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildAddNoteModal(Interaction.user.id, TargetId));
 }
 
-// The form was sent: the note is saved to the member and posted in this server's notes log, saying who added it.
-// A global note is also posted in every other server's notes log, without who added it, even if the member is not there.
 export async function HandleAddNoteForm(Interaction, Context, { TargetId }) {
     const Field = (Id) => Interaction.fields.getTextInputValue(Id).trim();
     const Title = Field(NoteInputs.Title);
     const NoteText = Field(NoteInputs.Text);
     const MessageLink = Field(NoteInputs.MessageLink) || null;
-    // Global unless "This server only" was picked.
     const IsGlobal = Interaction.fields.getStringSelectValues(NoteInputs.Visibility)[0] !== NoteVisibility.ThisServer;
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const Fail = (Description) => Interaction.editReply(BuildModPanelResultView('Add Note Failed', Description, { Success: false }));

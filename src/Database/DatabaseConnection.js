@@ -7,18 +7,15 @@ export function CreateDatabasePool(DatabaseConfig) {
         user: DatabaseConfig.User,
         password: DatabaseConfig.Password,
         database: DatabaseConfig.Name,
-        // All timestamps are stored and read as UTC.
         timezone: 'Z',
         charset: 'utf8mb4',
         connectionLimit: 10,
         connectTimeout: 10000,
         waitForConnections: true,
-        // BIGINT IDs are returned as strings so large values are never rounded.
         supportBigNumbers: true,
         bigNumberStrings: true,
     });
 
-    // 'connection' gives us the underlying (callback-style) connection.
     Pool.pool.on('connection', (Connection) => {
         Connection.query("SET time_zone = '+00:00'");
     });

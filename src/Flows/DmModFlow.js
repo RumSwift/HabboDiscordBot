@@ -50,7 +50,6 @@ export async function ExecuteDmModCommand(Interaction, Context) {
         return;
     }
 
-    // Each server has its own thread, so Origins messages reach the Origins team and Habbo messages the Habbo team.
     const Guild = await GuildConfigurationRepository.FindGuildByGuildId(GuildId);
     const ChannelId = Guild ? await GuildConfigurationRepository.GetLogChannelId(GuildId, LogChannelTypes.DmMod) : null;
     const Channel = await FetchTextChannel(Interaction.client, ChannelId);
@@ -114,7 +113,6 @@ async function FindOpenDmMod(Interaction, Context, DmModId) {
     return DmMod;
 }
 
-// "Reply" pressed on a card: ask the moderator for the reply.
 export async function HandleDmModReplyButton(Interaction, Context, { Arguments }) {
     const DmMod = await FindOpenDmMod(Interaction, Context, Arguments[0]);
     if (!DmMod) {
@@ -132,13 +130,11 @@ export async function HandleDmModReplyModal(Interaction, Context, { Arguments })
     const ReplyText = Interaction.fields.getTextInputValue(DmModReplyInputId);
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    // Claimed first so two moderators can't both answer.
     if (!(await DmModRepository.ClaimReply(DmMod.DmModId, { RepliedByDiscordUserId: Interaction.user.id, ReplyText }))) {
         await Interaction.editReply(BuildDmModResultView('Already Answered', 'Another moderator has just replied to this message.', { Success: false }));
         return;
     }
 
-    // The card is updated either way; an undelivered reply gets a note so the team knows.
     let Delivered = true;
     try {
         const Member = await Interaction.client.users.fetch(DmMod.DiscordUserId);
@@ -150,7 +146,6 @@ export async function HandleDmModReplyModal(Interaction, Context, { Arguments })
     await DmModRepository.SetReplyDelivered(DmMod.DmModId, Delivered);
     Context.Logger.Info('/dmmod reply recorded', { DmModId: DmMod.DmModId, StaffDiscordUserId: Interaction.user.id, DiscordUserId: DmMod.DiscordUserId, Delivered });
 
-    // A failure to update the card is only logged.
     try {
         const Replied = await DmModRepository.FindById(DmMod.DmModId);
         const [Channel, User, PingRoleId] = await Promise.all([

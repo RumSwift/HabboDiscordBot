@@ -48,7 +48,6 @@ export class IntervalTask {
             clearTimeout(this.Timer);
         }
         this.Timer = setTimeout(() => this.RunOnce(), DelayMs);
-        // Do not keep the process alive just because of this timer.
         this.Timer.unref?.();
     }
 

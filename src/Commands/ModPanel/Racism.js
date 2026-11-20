@@ -7,7 +7,6 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// 😡 Racism (Moderate User menu): asks for the reasons, and optionally a link to the message or logs, first.
 export async function ShowRacismModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildRacismModal(Interaction.user.id, TargetId));
 }
@@ -22,8 +21,6 @@ async function SendDm(Member, Context, ViewData) {
     }
 }
 
-// The form was sent. Counting earlier racism violations in this server: a 7 day mute, then a ban.
-// The member is DMed, it is logged in Mod Actions (and the user banned channel for a ban) and recorded in their history.
 export async function HandleRacismForm(Interaction, Context, { TargetId }) {
     const Field = (Id) => Interaction.fields.getTextInputValue(Id).trim();
     const PrivateReason = Field(ReasonInputs.PrivateReason);
@@ -82,7 +79,6 @@ export async function HandleRacismForm(Interaction, Context, { TargetId }) {
     let Delivered;
     let LogMessage;
     if (IsBan) {
-        // DMed while they still share a server with the bot, and logged before the ban.
         Delivered = await SendDm(Member, Context, DmView);
         const [BanLogMessage, ModActionsMessage] = await Promise.all([Log(LogChannelTypes.BanLog, Delivered), Log(LogChannelTypes.ModActions, Delivered)]);
         LogMessage = ModActionsMessage;
@@ -90,7 +86,6 @@ export async function HandleRacismForm(Interaction, Context, { TargetId }) {
             await Member.ban({ reason: AuditReason });
         } catch (BanError) {
             Context.Logger.Warn('Racism ban failed', { GuildId: Interaction.guildId, DiscordUserId: TargetId, Error: BanError });
-            // The logs said they were banned; take them back down.
             await Promise.all([BanLogMessage, ModActionsMessage].filter(Boolean).map((Message) => Message.delete().catch(() => {})));
             await Fail(`This is racism violation #${ViolationNumber}, which is a **ban**, but Discord refused the ban. Please try again or contact Habbo Staff.`);
             return;

@@ -10,7 +10,6 @@ export function CreateInternalApiAuthentication(InternalApiKey) {
         if (typeof ProvidedKey !== 'string' || ProvidedKey.length === 0) {
             return SendUnauthorised(Response);
         }
-        // Hash both sides so timingSafeEqual works even when the lengths differ.
         const ProvidedDigest = createHash('sha256').update(ProvidedKey, 'utf8').digest();
         if (!timingSafeEqual(ProvidedDigest, ExpectedDigest)) {
             return SendUnauthorised(Response);

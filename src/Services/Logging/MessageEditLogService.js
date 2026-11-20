@@ -3,7 +3,7 @@ import { Colours } from '../../Components/ComponentStyles.js';
 import { LogChannelTypes } from '../../Repositories/GuildConfigurationRepository.js';
 import { BuildLogCard, FormatCodeBlock } from './LogCard.js';
 
-const MaxVersionLength = 1700; // before and after both have to fit in Discord's 4000-character total
+const MaxVersionLength = 1700;
 
 function FormatVersion(Content) {
     return Content ? FormatCodeBlock(Content, MaxVersionLength) : '*No text*';
@@ -31,7 +31,6 @@ export class MessageEditLogService {
     }
 
     async HandleMessageUpdate(OldMessage, NewMessage) {
-        // Uncached messages have no original text. Discord also sends updates when a link preview loads, so only text changes count.
         if (OldMessage.partial || NewMessage.partial || !NewMessage.guildId || !NewMessage.author || NewMessage.author.bot) {
             return false;
         }

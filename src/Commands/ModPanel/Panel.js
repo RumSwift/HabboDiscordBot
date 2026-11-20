@@ -25,7 +25,6 @@ export async function RefuseModPanel(Interaction, Title, Description) {
     await Interaction.reply(EphemeralView(BuildModPanelResultView(Title, Description, { Success: false })));
 }
 
-// /modpanel <user>: the moderation panel for a member of this server.
 export async function ExecuteModPanelCommand(Interaction, Context) {
     if (!HasModPanelPermission(Interaction)) {
         await RefuseModPanel(Interaction, 'No Permission', 'You do not have permission to use this command.');
@@ -52,7 +51,6 @@ export async function ExecuteModPanelCommand(Interaction, Context) {
     OpenPanels.Open(PanelKey(Interaction, Target.id), Interaction, Context.Logger);
 }
 
-// Panel actions that are not built yet.
 async function HandleNotAvailable(Interaction, Context) {
     await Interaction.reply(EphemeralView(BuildModPanelResultView('🚧 Coming Soon', 'This Modpanel action is not available yet.', { Colour: Colours.Neutral })));
     ScheduleSelfDestruct(Interaction, Context.Logger);
@@ -66,7 +64,6 @@ const ButtonHandlers = Object.freeze({
     [ModPanelButtons.ViewNotes]: HandleViewNotes,
 });
 
-// Buttons on a panel action's own reply (e.g. the Scam/Phishing "Are you sure?"), carrying the target's ID.
 function WithPermission(Handler) {
     return async (Interaction, Context, Parsed) => {
         if (!HasModPanelPermission(Interaction)) {
@@ -78,7 +75,6 @@ function WithPermission(Handler) {
     };
 }
 
-// Every panel button carries the target's ID and the button's key.
 async function HandlePanelButton(Interaction, Context, Parsed) {
     if (!HasModPanelPermission(Interaction)) {
         await RefuseModPanel(Interaction, 'No Permission', 'You do not have permission to use this.');
@@ -98,7 +94,6 @@ const ModerateHandlers = Object.freeze({
     [ModerateOptions.Custom]: ShowCustomTypeMenu,
 });
 
-// The "Moderate User" menu carries the target's ID; the chosen option picks the action.
 async function HandleModerateMenu(Interaction, Context, Parsed) {
     if (!HasModPanelPermission(Interaction)) {
         await RefuseModPanel(Interaction, 'No Permission', 'You do not have permission to use this.');

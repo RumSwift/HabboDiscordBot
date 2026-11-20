@@ -20,7 +20,6 @@ function FormatLink(Link) {
 }
 
 export function CreateHabboLinkRoutes({ Services }) {
-    // Deliberately no route that creates a link: that only happens through the motto check.
     const LinkRouter = Router();
     const { AuditHistoryService, HabboLinkService } = Services;
 
@@ -57,7 +56,6 @@ export function CreateHabboLinkRoutes({ Services }) {
             throw new ApiError(400, 'GAME_REQUIRED', 'This user has a Habbo and a Habbo Origins link. Pass Game (HABBO or ORIGINS) or ExpectedLinkId.');
         }
 
-        // Apply the role removal / audit message in the background (they retry on failure).
         Services.SessionService.ClearSession(DiscordUserId);
         Services.RoleRecoveryService.ProcessDueOperations({ DiscordUserId }).catch(() => {});
         Services.NicknameService?.SyncUser(DiscordUserId, { UnlinkedLink: Result.Link }).catch(() => {});

@@ -38,7 +38,6 @@ export class AuditHistoryService {
     }
 
     async GetLinkedAccountsForDiscordUser(DiscordUserId) {
-        // Newest first, so the first row seen for each account carries its latest username.
         const Links = await this.LinkRepository.GetLinkHistoryByDiscordUserId(DiscordUserId, { Limit: 1000 });
         const AccountsByKey = new Map();
 
@@ -60,7 +59,7 @@ export class AuditHistoryService {
                 AccountsByKey.set(Key, Account);
             }
             Account.LinkCount++;
-            Account.FirstLinkedTimestamp = Link.LinkedTimestamp; // rows are newest first, so the last one seen is the oldest
+            Account.FirstLinkedTimestamp = Link.LinkedTimestamp;
         }
 
         return [...AccountsByKey.values()];

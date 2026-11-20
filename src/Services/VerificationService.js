@@ -30,7 +30,6 @@ export const VerificationOutcomes = Object.freeze({
 
 export const MaxUsernameLength = 64;
 
-// Abuse protection: limits per Discord user.
 const MaxChallengesPerWindow = 5;
 const ChallengeWindowMinutes = 15;
 const MaxHabboLookupsPerMinute = 10;
@@ -98,7 +97,6 @@ export class VerificationService {
             Status: ChallengeStatuses.Active,
         };
 
-        // Only one open challenge per user: close the old one and insert the new one together.
         await WithTransaction(this.Pool, async (Connection) => {
             await this.ChallengeRepository.CloseOpenChallengesForUser(DiscordUserId, ChallengeStatuses.Superseded, Now, Connection);
             await this.ChallengeRepository.InsertChallenge(Challenge, Connection);
@@ -129,7 +127,6 @@ export class VerificationService {
             return { Outcome: VerificationOutcomes.RateLimited, Challenge };
         }
 
-        // Claim the challenge so a double-click cannot process it twice.
         const Claimed = await this.ChallengeRepository.TryBeginCheck(ChallengeId, DiscordUserId, Now);
         if (!Claimed) {
             const Latest = await this.ChallengeRepository.FindChallengeById(ChallengeId);
@@ -141,7 +138,6 @@ export class VerificationService {
                     await this.ExpireChallenge(ChallengeId);
                     return { Outcome: VerificationOutcomes.Expired, Challenge: Latest };
                 }
-                // A concurrent check finished between our claim and this read; it handled the click.
                 return { Outcome: VerificationOutcomes.CheckInProgress, Challenge: Latest };
             }
             return this.ClosedOutcome(Latest ?? Challenge);
@@ -150,7 +146,6 @@ export class VerificationService {
         try {
             return await this.CheckClaimedChallenge(Challenge);
         } catch (CheckError) {
-            // Something unexpected (e.g. database error). Give the attempt back.
             await this.ChallengeRepository.ReleaseCheck(ChallengeId, this.Clock()).catch(() => {});
             throw CheckError;
         }
@@ -159,10 +154,8 @@ export class VerificationService {
     async CheckClaimedChallenge(Challenge) {
         const { ChallengeId, DiscordUserId } = Challenge;
 
-        // Always fetch a fresh motto, by unique ID, never reusing the first lookup.
         const Lookup = await this.HabboApiService.LookupUserByUniqueId(Challenge.HotelCode, Challenge.HabboUniqueId);
 
-        // Problems on Habbo's side must NOT consume an attempt.
         if (Lookup.Status === HabboLookupStatuses.Unavailable) {
             await this.ChallengeRepository.ReleaseCheck(ChallengeId, this.Clock());
             return { Outcome: VerificationOutcomes.ServiceUnavailable, Reason: Lookup.Reason, RetryAfterSeconds: Lookup.RetryAfterSeconds, Challenge };
@@ -176,13 +169,11 @@ export class VerificationService {
             return { Outcome: VerificationOutcomes.MottoUnavailable, Challenge };
         }
 
-        // Exact, case-sensitive comparison (via constant-time HMAC comparison).
         const IsMatch = VerifyCodeHash(Lookup.Account.Motto, Challenge.VerificationCodeHash, this.Config.CodeSecret);
 
         if (!IsMatch) {
             const Updated = await this.ChallengeRepository.RecordFailedAttempt(ChallengeId, this.Config.MaxAttempts, this.Clock());
             if (!Updated) {
-                // The challenge was cancelled/expired while we were checking.
                 const Latest = await this.ChallengeRepository.FindChallengeById(ChallengeId);
                 return this.ClosedOutcome(Latest ?? Challenge);
             }
@@ -197,7 +188,6 @@ export class VerificationService {
             };
         }
 
-        // Motto matches: commit the link (re-checks status, expiry and ownership in a transaction).
         const LinkResult = await this.HabboLinkService.CompleteVerifiedLink({
             ChallengeId,
             DiscordUserId,

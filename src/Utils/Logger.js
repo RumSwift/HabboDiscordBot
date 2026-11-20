@@ -29,8 +29,6 @@ export function SanitiseContext(Context) {
     return Result;
 }
 
-// Exact secret values (e.g. the DB username/password) that must never appear in output,
-// even inside third-party error messages such as "Access denied for user '...'".
 const SecretValues = new Set();
 
 export function RegisterSecretValues(Values) {

@@ -37,7 +37,6 @@ function ModerationTeamName(GuildType) {
     return GuildType === Games.Origins ? 'Habbo Hotel: Origins Moderation' : 'Habbo Hotel Moderation';
 }
 
-// The card posted in the server's /dmmod thread. Rebuilt from the database row whenever it changes.
 export function BuildDmModCard(DmMod, User, { PingRoleId = null, Now = DmMod.CreatedTimestamp } = {}) {
     const IsOpen = DmMod.Status === 'OPEN';
     const Card = BuildLogCard({
@@ -83,7 +82,6 @@ export function BuildDmModCard(DmMod, User, { PingRoleId = null, Now = DmMod.Cre
     };
 }
 
-// DM sent to the member as a receipt.
 export function BuildDmModReceiptView(User, Text, GuildType, BotAvatarUrl) {
     const Embed = new EmbedBuilder()
         .setColor(Purple)
@@ -99,7 +97,6 @@ export function BuildDmModReceiptView(User, Text, GuildType, BotAvatarUrl) {
     return View(Embed);
 }
 
-// DM carrying a moderator's reply.
 export function BuildDmModReplyDmView(UserId, ReplyText, GuildType, OriginalText) {
     const Embed = new EmbedBuilder()
         .setColor(Purple)
@@ -121,7 +118,6 @@ export function BuildDmModReplyModal(DmModId, OwnerDiscordUserId) {
         );
 }
 
-// Ephemeral confirmations: successes self-destruct, problems stay so they can be read.
 export function BuildDmModResultView(Title, Description, { Success = true } = {}) {
     const Embed = new EmbedBuilder()
         .setTitle(Title)

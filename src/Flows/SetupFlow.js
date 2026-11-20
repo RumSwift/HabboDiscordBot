@@ -4,9 +4,6 @@ import { EphemeralView } from '../Components/ComponentStyles.js';
 import { BuildSetupDoneView, BuildSetupErrorView, BuildSetupOverviewView } from '../Components/SetupComponents.js';
 import { ScheduleSelfDestruct } from './FlowHelpers.js';
 
-// /setup: the in-Discord way to fill in what the admin page does. It is a staff command (see Utils/StaffAccess.js);
-// the shared rules in AdminService do the checking and saving.
-
 const Subcommands = { server: SetupServer, channel: SetupChannel, role: SetupRole, nicknames: SetupNicknames, view: SetupView };
 
 export async function ExecuteSetupCommand(Interaction, Context) {

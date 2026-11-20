@@ -57,7 +57,6 @@ export async function HandleSelectHotel(Interaction, Context, { Arguments }) {
         return;
     }
     Context.Services.SessionService.SelectHotel(Interaction.user.id, HotelCode);
-    // showModal must be the first response, so no database work happens before it.
     await Interaction.showModal(BuildHabboUsernameModal({ OwnerDiscordUserId: Interaction.user.id, HotelCode }));
 }
 
@@ -72,7 +71,6 @@ export async function HandleUsernameModal(Interaction, Context, { Arguments }) {
         return;
     }
 
-    // The Habbo lookup can take a few seconds, so show a loading screen straight away.
     await Interaction.update(BuildLookupLoadingView({ HabboUsername: Username.trim(), HotelCode }));
 
     const Result = await VerificationService.StartChallenge({ DiscordUserId, HotelCode, Username });
@@ -120,7 +118,6 @@ export async function HandleUsernameModal(Interaction, Context, { Arguments }) {
     }
 }
 
-// Notices shown on the verification screen. None of these use up an attempt.
 const NoAttemptUsed = 'This did not use up an attempt.';
 const CheckNotices = {
     [VerificationOutcomes.ServiceUnavailable]: { Title: 'Habbo Is Not Responding', Message: `We could not reach Habbo to check your motto. ${NoAttemptUsed} Please try again in a moment.` },
@@ -144,7 +141,6 @@ export async function HandleCheckMotto(Interaction, Context, { Arguments }) {
         SessionService.SetChecking(DiscordUserId, false);
     }
 
-    // Make sure a countdown redraw cannot land on top of our result.
     await SessionService.WaitForPendingEdit(DiscordUserId);
 
     switch (Result.Outcome) {
@@ -171,7 +167,6 @@ export async function HandleCheckMotto(Interaction, Context, { Arguments }) {
             return;
 
         case VerificationOutcomes.CheckInProgress:
-            // Another click is already being processed; it will update the message.
             return;
 
         case VerificationOutcomes.Failed:
@@ -192,7 +187,6 @@ export async function HandleCheckMotto(Interaction, Context, { Arguments }) {
         case VerificationOutcomes.ChallengeClosed:
             ClearSessionIfCurrent(SessionService, DiscordUserId, ChallengeId);
             if (Result.Status === 'COMPLETED') {
-                // A late duplicate click after success: keep showing the success message.
                 await Interaction.editReply(BuildVerifiedView({ HabboUsername: Result.Challenge.HabboUsername, HotelCode: Result.Challenge.HotelCode }));
                 ScheduleSelfDestruct(Interaction, Context.Logger);
             } else {

@@ -3,7 +3,6 @@ export class MemberRoleSnapshotRepository {
         this.Pool = Pool;
     }
 
-    // Returns false when the server is not in the Guilds table.
     async Save(GuildId, DiscordUserId, RoleIds, Now = new Date()) {
         const [Result] = await this.Pool.query(
             `INSERT INTO MemberRoleSnapshots (GuildUuid, DiscordUserId, RoleIds, LeftTimestamp)

@@ -55,7 +55,6 @@ export function BuildVerificationView({ OwnerDiscordUserId, ChallengeId, Verific
 
 export function ExtractVerificationCodeFromMessage(Message) {
     const Texts = CollectTextContent((Message?.components ?? []).map((Component) => (Component.toJSON ? Component.toJSON() : Component)));
-    // Messages sent before the switch to Components V2 kept the code in an embed field.
     const LegacyField = Message?.embeds?.[0]?.fields?.find((Item) => Item.name === 'Your Verification Code');
     if (LegacyField) {
         Texts.push(`**Your Verification Code**\n${LegacyField.value}`);

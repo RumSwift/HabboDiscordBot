@@ -14,7 +14,6 @@ const MaxSessions = 50;
 
 const Digest = (Text) => createHash('sha256').update(Text, 'utf8').digest();
 
-// Signed-in browsers, kept in memory: restarting the bot signs everyone out.
 export class AdminSessionStore {
     constructor({ Now = () => Date.now() } = {}) {
         this.Sessions = new Map();
@@ -27,7 +26,6 @@ export class AdminSessionStore {
             this.Sessions.delete(this.Sessions.keys().next().value);
         }
         const Token = randomBytes(32).toString('base64url');
-        // Only a hash of the token is kept, so the map never holds a usable cookie value.
         this.Sessions.set(Digest(Token).toString('hex'), this.Now() + SessionLifetimeMs);
         return Token;
     }
@@ -91,8 +89,6 @@ function SecurityHeaders(Request, Response, Next) {
     Next();
 }
 
-// Requests that change something must be JSON (which a cross-site form cannot send) and, when the browser
-// says where they came from, come from this page. The SameSite=Strict cookie is the main defence; this is a second one.
 function RequireSameOriginJson(Request, Response, Next) {
     if (Request.method === 'GET' || Request.method === 'HEAD') {
         return Next();
@@ -106,7 +102,6 @@ function RequireSameOriginJson(Request, Response, Next) {
         try {
             OriginHost = new URL(Origin).host;
         } catch {
-            // Treated as a mismatch below.
         }
         if (OriginHost !== Request.get('host')) {
             return Next(new ApiError(403, 'CROSS_ORIGIN', 'Cross-site requests are not allowed.'));
@@ -125,7 +120,6 @@ export function CreateAdminRouter({ Password, AdminService, Logger, Sessions = n
     }
     const ExpectedDigest = Digest(Password);
 
-    // The page loads its files relative to /admin/, so /admin needs the trailing slash.
     Router.get('/', (Request, Response, Next) => (Request.originalUrl.split('?')[0].endsWith('/') ? Next() : Response.redirect(302, `${AdminPrefix}/`)));
     Router.use(express.static(PublicDirectory, { index: 'index.html', redirect: false, dotfiles: 'deny' }));
 
@@ -136,7 +130,6 @@ export function CreateAdminRouter({ Password, AdminService, Logger, Sessions = n
 
     Api.post(
         '/login',
-        // Ten wrong passwords per address per 15 minutes; correct ones do not count.
         rateLimit({
             windowMs: 15 * 60 * 1000,
             limit: 10,
@@ -147,7 +140,6 @@ export function CreateAdminRouter({ Password, AdminService, Logger, Sessions = n
         }),
         (Request, Response, Next) => {
             const Provided = Request.body?.Password;
-            // Hash both sides so timingSafeEqual works even when the lengths differ.
             if (typeof Provided !== 'string' || !timingSafeEqual(Digest(Provided), ExpectedDigest)) {
                 Logger?.Warn('Failed admin page sign-in', { Ip: Request.ip });
                 return Next(new ApiError(401, 'WRONG_PASSWORD', 'Wrong password.'));

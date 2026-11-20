@@ -2,7 +2,7 @@ import { IntervalTask } from '../Utils/IntervalTask.js';
 import { BuildVerificationExpiredView, BuildVerificationView } from '../Components/VerificationComponents.js';
 
 
-const SessionIdleLimitMs = 20 * 60 * 1000; // forget abandoned sessions after 20 minutes
+const SessionIdleLimitMs = 20 * 60 * 1000;
 
 export class VerificationSessionService {
     constructor({ VerificationService, Logger, Clock = () => new Date(), CountdownIntervalMs = 10000 }) {
@@ -104,7 +104,6 @@ export class VerificationSessionService {
             );
             await Session.PendingEdit;
         } catch (UpdateError) {
-            // E.g. the user dismissed the message. Stop redrawing; the DB still enforces expiry.
             this.Logger?.Debug('Countdown update failed; stopping countdown for this session', { DiscordUserId, Error: UpdateError });
             if (this.GetSession(DiscordUserId) === Session) {
                 Session.Interaction = null;

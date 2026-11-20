@@ -20,7 +20,6 @@ function RequireServerType(GuildType) {
     return ServerType;
 }
 
-// Keeps only the known setting types, each set to a Discord ID or '' (cleared).
 function ReadSettings(Body, Settings, What) {
     if (Body === undefined) {
         return {};
@@ -40,12 +39,10 @@ function ReadSettings(Body, Settings, What) {
     return Values;
 }
 
-// What a setting needs, for the error message when a channel of the wrong kind is entered.
 function DescribeChannelTypes(Types) {
     return Types.includes(ChannelType.GuildForum) && Types.length === 1 ? 'a forum channel' : 'a text channel or thread';
 }
 
-// The admin page's view of the bot: what is saved in the database. IDs are typed in by hand.
 export class AdminService {
     constructor({ GuildConfigurationRepository, Client = null, OnConfigurationChanged = null, Logger }) {
         this.GuildConfigurationRepository = GuildConfigurationRepository;
@@ -64,8 +61,6 @@ export class AdminService {
         return { IsConnected, BotName: IsConnected ? this.Client.user?.tag ?? null : null, Servers };
     }
 
-    // A channel the bot can see must be the right kind for its setting (e.g. the mod mail forum must be a forum).
-    // Channels it cannot see, such as archived threads, are accepted as typed.
     CheckChannelKinds(GuildId, ServerType, Channels) {
         const Guild = this.Client?.guilds?.cache?.get(GuildId);
         for (const [Type, ChannelId] of Object.entries(Channels)) {
@@ -77,9 +72,6 @@ export class AdminService {
         }
     }
 
-    // /setup server: makes the Discord server it is run in the Habbo or Origins server.
-    // A slot that already belongs to another server is only handed over once the bot has left that server,
-    // so running it in the wrong server can't take over a working setup. Moving a slot clears its old roles and channels.
     async ClaimServer(GuildType, GuildId, { Source } = {}) {
         const ServerType = RequireServerType(GuildType);
         RequireSnowflake(GuildId, 'Server ID');
@@ -101,7 +93,6 @@ export class AdminService {
         return { Outcome: Current ? 'Moved' : 'Claimed', PreviousName: Current?.Name ?? null };
     }
 
-    // The saved server type for a Discord server, or null if it isn't set up.
     async FindServer(GuildId) {
         const Saved = await this.GuildConfigurationRepository.GetConfiguration();
         const Guild = Saved.find((Row) => Row.GuildId === GuildId);

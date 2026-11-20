@@ -5,7 +5,6 @@ const Flash = {};
 
 const $ = (Id) => document.getElementById(Id);
 
-// Builds an element. Text is always set with textContent, so saved values can never inject HTML.
 function El(Tag, Properties = {}, Children = []) {
     const Element = document.createElement(Tag);
     for (const [Key, Value] of Object.entries(Properties)) {
@@ -53,12 +52,10 @@ function ShowSignIn(Message = '') {
     $('Password').focus();
 }
 
-// A text box for a Discord ID.
 function IdInput(Value, Label) {
     return El('input', { type: 'text', inputMode: 'numeric', placeholder: 'Discord ID', value: Value ?? '', autocomplete: 'off', spellcheck: false, size: 22, 'aria-label': Label });
 }
 
-// One table per group of settings: name, ID box, what it does.
 function RenderSettings(Server, Saved, Inputs) {
     const Container = El('div');
 

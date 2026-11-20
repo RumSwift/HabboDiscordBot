@@ -12,7 +12,6 @@ export class ModMailRepository {
         this.Pool = Pool;
     }
 
-    // Returns the new ID, or null when the member already has an open mail (with either team).
     async Create({ GuildId, DiscordUserId, Title, Inquiry, ForumChannelId, PassedFromModMailId = null, Now = new Date() }) {
         try {
             const [Result] = await this.Pool.query(
@@ -63,7 +62,6 @@ export class ModMailRepository {
         return Result.affectedRows > 0;
     }
 
-    // Only allowed while no moderator has replied. False means it was replied to, closed or passed already.
     async MarkPassed(ModMailId, PassedByDiscordUserId, Now = new Date()) {
         const [Result] = await this.Pool.query(
             "UPDATE ModMails SET Status = 'PASSED', OpenDiscordUserId = NULL, ClosedByDiscordUserId = ?, ClosedTimestamp = ? WHERE ModMailId = ? AND Status = 'OPEN' AND FirstModReplyTimestamp IS NULL",
@@ -72,7 +70,6 @@ export class ModMailRepository {
         return Result.affectedRows > 0;
     }
 
-    // Undoes MarkPassed when the other team's thread could not be created.
     async UndoPass(ModMailId) {
         await this.Pool.query(
             "UPDATE ModMails SET Status = 'OPEN', OpenDiscordUserId = DiscordUserId, ClosedByDiscordUserId = NULL, ClosedTimestamp = NULL WHERE ModMailId = ? AND Status = 'PASSED'",
@@ -80,7 +77,6 @@ export class ModMailRepository {
         );
     }
 
-    // True only for the first moderator reply, which ends the chance to pass the mail on.
     async MarkModReplied(ModMailId, Now = new Date()) {
         const [Result] = await this.Pool.query('UPDATE ModMails SET FirstModReplyTimestamp = ? WHERE ModMailId = ? AND FirstModReplyTimestamp IS NULL', [Now, ModMailId]);
         return Result.affectedRows > 0;

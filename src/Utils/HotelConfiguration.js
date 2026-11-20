@@ -4,7 +4,6 @@ export const Games = Object.freeze({ Habbo: 'HABBO', Origins: 'ORIGINS' });
 
 export const GameLabels = Object.freeze({ [Games.Habbo]: 'Habbo', [Games.Origins]: 'Habbo Origins' });
 
-// Emoji is an application emoji, uploaded to the bot automatically and usable in every server (see ApplicationEmojis.js).
 const FlagEmojis = {
     ComFlag: ApplicationEmoji('ComFlag', '1558779213396574279', '🇬🇧'),
     BrazillianFlag: ApplicationEmoji('BrazillianFlag', '1558779029446852678', '🇧🇷'),
@@ -17,8 +16,6 @@ const FlagEmojis = {
     TurkishFlag: ApplicationEmoji('TurkishFlag', '1558779033334980618', '🇹🇷'),
 };
 
-// RoleType is looked up in GuildRoles, only in servers whose GuildType matches the hotel's Game.
-// ImageHotel (Origins only) is the hotel= value for the Frankly Origins avatar image service.
 export const Hotels = Object.freeze([
     { HotelCode: 'COM', Emoji: FlagEmojis.ComFlag, Game: Games.Habbo, Label: 'Habbo.com (English)', Hostname: 'www.habbo.com', NicknameTag: 'COM', ShortName: 'COM', RoleType: 'VERIFIED_COM' },
     { HotelCode: 'COM_BR', Emoji: FlagEmojis.BrazillianFlag, Game: Games.Habbo, Label: 'Habbo.com.br (Português)', Hostname: 'www.habbo.com.br', NicknameTag: 'BR', ShortName: 'COM_BR', RoleType: 'VERIFIED_COM_BR' },
@@ -73,7 +70,6 @@ export function FormatHotelEmoji(HotelCode) {
     return Emoji ? FormatEmoji(Emoji) : '';
 }
 
-// Flag plus short name, e.g. "<:ComFlag:...> COM", for logs and audits.
 export function FormatHotelWithFlag(HotelCode) {
     return [FormatHotelEmoji(HotelCode), FormatHotel(HotelCode)].filter(Boolean).join(' ');
 }

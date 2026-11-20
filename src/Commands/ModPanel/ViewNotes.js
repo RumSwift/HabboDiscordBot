@@ -1,8 +1,6 @@
 import { MessageFlags } from 'discord.js';
 import { BuildModPanelResultView, BuildViewNotesView } from '../../Components/ModPanelComponents.js';
 
-// 📋 View Notes: lists every global note on the user, plus the notes added in this server only.
-// Notes kept to another server are never shown here. The panel stays open, as nothing was changed.
 export async function HandleViewNotes(Interaction, Context, { TargetId }) {
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {

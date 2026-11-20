@@ -77,7 +77,6 @@ export class InteractionHandler {
                 await Interaction.reply(EphemeralView(ErrorView));
             }
         } catch (ResponseError) {
-            // The interaction token may have expired. Nothing more we can do.
             this.Logger.Debug('Could not send error response', { Error: ResponseError });
         }
     }

@@ -3,12 +3,11 @@ import { Colours, Emojis, FormatEmoji } from '../../Components/ComponentStyles.j
 import { LogChannelTypes } from '../../Repositories/GuildConfigurationRepository.js';
 import { BuildLogCard, FormatCodeBlock } from './LogCard.js';
 
-const MaxContentLength = 2800; // leaves room for the rest of the card within Discord's 4000-character total
-const MaxGalleryItems = 10; // Discord limit
-const MaxFilesPerMessage = 10; // Discord limit
+const MaxContentLength = 2800;
+const MaxGalleryItems = 10;
+const MaxFilesPerMessage = 10;
 const DownloadTimeoutMs = 15000;
 const MegaByte = 1024 * 1024;
-// Discord's upload limit per server boost tier.
 const UploadLimitBytes = { 0: 10 * MegaByte, 1: 10 * MegaByte, 2: 50 * MegaByte, 3: 100 * MegaByte };
 
 export function FormatContentBlock(Content) {
@@ -19,15 +18,12 @@ function FormatSize(Bytes) {
     return `${(Bytes / MegaByte).toFixed(1)} MB`;
 }
 
-// Numbered so names are unique; SPOILER_ must stay at the front for Discord to keep the file hidden.
 function SafeFileName(Index, Name) {
     const Clean = String(Name ?? 'file').replace(/[^\w.-]/g, '_');
     const IsSpoiler = Clean.startsWith('SPOILER_');
     return `${IsSpoiler ? 'SPOILER_' : ''}${Index + 1}_${IsSpoiler ? Clean.slice(8) : Clean}`;
 }
 
-// Discord removes a deleted message's files, so they are downloaded straight away and re-uploaded with the log.
-// LimitBytes overrides the server's upload limit (e.g. DMs, which always allow 10 MB).
 export async function SaveAttachments(Message, { Fetch = fetch, LimitBytes = null } = {}) {
     let BytesLeft = LimitBytes ?? UploadLimitBytes[Message.guild?.premiumTier ?? 0] ?? UploadLimitBytes[0];
     const Results = [];
@@ -66,7 +62,6 @@ async function Download(Fetch, Urls) {
                 return Buffer.from(await Response.arrayBuffer());
             }
         } catch {
-            // Try the next URL.
         }
     }
     return null;
@@ -86,7 +81,6 @@ export function BuildMessageDeletedCard(Message, { SavedAttachments = [], Now = 
         Fields.push({ Label: 'Not saved', Value: NotSaved.map((Saved) => `${escapeMarkdown(Saved.Name)} · *${Saved.Problem}*`).join('\n') });
     }
 
-    // Saved images and videos, then stickers and linked GIF/image previews, whose links outlive the message.
     const GalleryItems = SavedAttachments.filter((Saved) => Saved.Buffer && Saved.IsMedia).map((Saved) =>
         new MediaGalleryItemBuilder().setURL(`attachment://${Saved.FileName}`).setSpoiler(Saved.IsSpoiler),
     );
@@ -119,7 +113,6 @@ export class MessageDeleteLogService {
     }
 
     async HandleMessageDelete(Message) {
-        // Uncached messages have no author or content; bot messages are skipped to keep the log readable.
         if (Message.partial || !Message.guildId || !Message.author || Message.author.bot) {
             return false;
         }

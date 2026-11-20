@@ -13,10 +13,8 @@ import {
     userMention,
 } from 'discord.js';
 
-// Discord's limit on all text in one Components V2 message.
 export const MaxCardTextLength = 4000;
 
-// A ``` inside the text is broken up so it can't end the block early.
 export function FormatCodeBlock(Text, MaxLength) {
     let Safe = Text.replaceAll('```', '`​`​`');
     if (Safe.length > MaxLength) {
@@ -29,7 +27,6 @@ export function FormatDate(When) {
     return When ? `${time(When, TimestampStyles.LongDate)} · ${time(When, TimestampStyles.RelativeTime)}` : 'Unknown';
 }
 
-// Highest role first, leaving out @everyone; long lists are cut short to fit the card.
 export function FormatRoles(Roles, GuildId, MaxLength = 1500) {
     const Sorted = [...Roles].filter((Role) => Role.id !== GuildId).sort((A, B) => B.position - A.position);
     if (Sorted.length === 0) {
@@ -50,11 +47,6 @@ function Separator(Spacing) {
     return new SeparatorBuilder().setDivider(true).setSpacing(Spacing);
 }
 
-// Layout shared by every log, top to bottom:
-//   title, user and ID beside their profile picture
-//   one block per field: bold label, value underneath
-//   anything extra (gallery, files) from AddExtras
-//   small footer with reference IDs and the time, then any buttons
 export function BuildLogCard({ Title, User, Colour, Fields = [], AddExtras = null, FooterNotes = [], Buttons = [], Now = new Date() }) {
     const Card = new ContainerBuilder().setAccentColor(Colour);
 

@@ -10,13 +10,10 @@ export class ConfigurationError extends Error {
     }
 }
 
-// Variables whose values are credentials. dotenv silently truncates unquoted
-// values at "#", so we check the raw .env text for that mistake.
 const CredentialVariables = ['DB_USER', 'DB_PASSWORD', 'DISCORD_TOKEN', 'INTERNAL_API_KEY', 'VERIFICATION_CODE_SECRET', 'ADMIN_PASSWORD'];
 
 const SnowflakePattern = /^\d{17,20}$/;
 
-// No longer read: servers, roles, log channels and nickname enforcement are set on the admin page.
 export const RetiredVariables = Object.freeze([
     'ENFORCE_NICKNAMES',
     'HABBO_GUILD_ID',
@@ -46,7 +43,6 @@ export function FindUnquotedHashCharacters(RawEnvText) {
         }
         const RawValue = Match[2];
         const IsQuoted = /^['"`]/.test(RawValue);
-        // A "#" directly attached to other characters is almost certainly part of the value.
         if (!IsQuoted && /[^\s]#/.test(RawValue)) {
             ProblemVariables.push(Match[1]);
         }
@@ -63,13 +59,11 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
             for (const VariableName of FindUnquotedHashCharacters(RawEnvText)) {
                 Problems.push(`${VariableName} contains an unquoted "#". Wrap the value in single quotes, e.g. ${VariableName}='value#here'.`);
             }
-            // quiet: do not print dotenv banners. Existing environment variables win over .env.
             dotenv.config({ path: EnvFilePath, quiet: true });
         }
         Source = process.env;
     }
 
-    // Credentials are NOT trimmed: leading/trailing characters may be significant.
     const ReadRaw = (Name) => (Source[Name] === undefined ? '' : String(Source[Name]));
     const ReadTrimmed = (Name) => ReadRaw(Name).trim();
 
@@ -123,7 +117,6 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         Problems.push('INTERNAL_API_KEY must be at least 32 characters long. Generate one with crypto.randomBytes(32).');
     }
 
-    // The admin page (/admin) is switched off while ADMIN_PASSWORD is empty.
     const Admin = {
         Password: ReadRaw('ADMIN_PASSWORD'),
     };
@@ -142,7 +135,6 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         Problems.push('VERIFICATION_CODE_SECRET must be at least 32 characters long.');
     }
     if (Verification.CodePrefix.length + Verification.CodeLength > 38) {
-        // Habbo mottos are limited in length, so keep the code comfortably short.
         Problems.push('VERIFICATION_CODE_PREFIX plus VERIFICATION_CODE_LENGTH must not exceed 38 characters.');
     }
 
@@ -160,7 +152,6 @@ export function LoadEnvironment({ Source, EnvFilePath = path.resolve(process.cwd
         throw new ConfigurationError(Problems);
     }
 
-    // Settings that moved to the admin page; reported at start so leftovers are not mistaken for live settings.
     const IgnoredVariables = RetiredVariables.filter((Name) => ReadTrimmed(Name) !== '');
 
     return Object.freeze({

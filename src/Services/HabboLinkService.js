@@ -59,7 +59,6 @@ export class HabboLinkService {
                 }
 
                 const OperationId = randomUUID();
-                // Only the link for the same game is replaced; the other game's link is untouched.
                 const PreviousLink = await this.LinkRepository.FindActiveLinkByDiscordUserId(DiscordUserId, Game, Connection, { ForUpdate: true });
 
                 if (PreviousLink) {
@@ -73,7 +72,6 @@ export class HabboLinkService {
                     });
                 }
 
-                // The unique indexes make a concurrent duplicate impossible.
                 const NewLinkId = await this.LinkRepository.InsertLink(
                     { DiscordUserId, HabboUniqueId, HabboUsername, HotelCode, Game, LinkedTimestamp: Now, LinkSource: LinkSources.Verification, OperationId },
                     Connection,
@@ -93,7 +91,6 @@ export class HabboLinkService {
                 await this.ChallengeRepository.TransitionStatus(ChallengeId, [ChallengeStatuses.Checking], ChallengeStatuses.Completed, Now, Connection);
                 await this.ChallengeRepository.CloseOpenChallengesForUser(DiscordUserId, ChallengeStatuses.Superseded, Now, Connection);
 
-                // Do not remove a role we are about to add again.
                 if (PreviousLink && PreviousLink.HotelCode !== HotelCode) {
                     await this.QueueRoleOperations(Connection, { OperationId, Link: PreviousLink, OperationType: RoleOperationTypes.Remove, Now });
                 }
@@ -106,14 +103,12 @@ export class HabboLinkService {
                 return { Outcome: LinkError.Outcome };
             }
             if (IsDuplicateKeyError(LinkError)) {
-                // Another request linked this Habbo account (or this user) at the same moment.
                 return { Outcome: LinkOutcomes.AlreadyLinkedElsewhere };
             }
             throw LinkError;
         }
     }
 
-    // Pass Game or ExpectedLinkId to choose the link; without either, the user must have exactly one.
     async UnlinkDiscordUser({ DiscordUserId, Game = null, ExpectedLinkId = null, Source = 'DISCORD', Reason = null }) {
         try {
             return await WithTransaction(this.Pool, async (Connection) => {
@@ -166,7 +161,6 @@ export class HabboLinkService {
         }
     }
 
-    // A member joined GuildId: queue the role for their link to that server's game, if they have one.
     async QueueRoleRestore(DiscordUserId, GuildId) {
         const Guild = await this.GuildConfigurationRepository.FindGuildByGuildId(GuildId);
         if (!Guild) {
@@ -179,7 +173,6 @@ export class HabboLinkService {
         return ActiveLink;
     }
 
-    // Writes the audit event plus one pending notification per verification log channel.
     async RecordAuditEvent(Connection, { OperationId, Link, ActionType, EventTimestamp, Details }) {
         const AuditLogId = await this.AuditRepository.InsertAuditEvent(
             {
@@ -205,7 +198,6 @@ export class HabboLinkService {
         return AuditLogId;
     }
 
-    // Habbo roles only exist in Habbo servers and Origins roles only in Origins servers.
     async QueueRoleOperations(Connection, { OperationId, Link, OperationType, Now, GuildId = null }) {
         const Hotel = GetHotel(Link.HotelCode);
         const Roles = (await this.GuildConfigurationRepository.GetRoles(Hotel.Game, Hotel.RoleType, Connection)).filter(

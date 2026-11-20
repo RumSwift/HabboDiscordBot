@@ -26,7 +26,6 @@ export class RoleRecoveryService {
     async ProcessDueOperations({ DiscordUserId = null, Limit = 20 } = {}) {
         const Operations = await this.RoleOperationRepository.ClaimDueOperations({ Now: this.Clock(), Limit, DiscordUserId });
         const Results = [];
-        // Process in order: for one user, a REMOVE must run before the following ADD.
         for (const Operation of Operations) {
             Results.push(await this.ProcessOperation(Operation));
         }
@@ -60,7 +59,6 @@ export class RoleRecoveryService {
             this.Logger?.Info('Discord role updated', { DiscordUserId, HotelCode, GuildId, OperationType });
             return 'COMPLETED';
         } catch (RoleError) {
-            // Not in that server (yet). They get the role when they join.
             if (RoleError?.code === UnknownMemberErrorCode) {
                 await this.RoleOperationRepository.MarkFinished(RoleOperationId, LockToken, 'SKIPPED', this.Clock(), 'Member is not in the server.');
                 this.Logger?.Debug('Role change skipped: member is not in the server', { DiscordUserId, GuildId, OperationType });

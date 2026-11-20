@@ -30,8 +30,6 @@ export class NicknameService {
         await this.Task.Stop();
     }
 
-    // Each server shows the account for its own game. Servers not in the Guilds table, or with nickname enforcement
-    // switched off on the admin page, are left alone.
     async SyncUser(DiscordUserId, { UnlinkedLink = null } = {}) {
         if (!this.Client?.isReady?.()) {
             return;
@@ -84,7 +82,6 @@ export class NicknameService {
                 if (Link.Game !== GuildType) {
                     continue;
                 }
-                // Not cached means they are not in this server (joins are cached as they happen).
                 const Member = Guild.members.cache.get(Link.DiscordUserId);
                 if (Member) {
                     await this.ApplyNickname(Member, Link, null);
@@ -115,7 +112,7 @@ export class NicknameService {
         if (ActiveLink) {
             Wanted = BuildLinkedNickname(ActiveLink.HabboUsername, ActiveLink.HotelCode);
         } else if (UnlinkedLink && Member.nickname === BuildLinkedNickname(UnlinkedLink.HabboUsername, UnlinkedLink.HotelCode)) {
-            Wanted = null; // remove the nickname we forced; leave anything else alone
+            Wanted = null;
         } else {
             return 'UNCHANGED';
         }
@@ -128,7 +125,6 @@ export class NicknameService {
             this.Logger?.Info(Wanted ? 'Nickname enforced' : 'Forced nickname removed', { DiscordUserId: Member.id, GuildId: Member.guild?.id });
             return 'CHANGED';
         } catch (NicknameError) {
-            // Discord never lets a bot rename the server owner; anything else needs fixing.
             const IsExpected = Member.id === Member.guild?.ownerId || NicknameError?.code === 10007;
             this.Logger?.[IsExpected ? 'Debug' : 'Warn']('Could not set nickname', {
                 DiscordUserId: Member.id,

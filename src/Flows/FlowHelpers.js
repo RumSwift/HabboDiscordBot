@@ -32,7 +32,6 @@ function DisableButtons(Data, ClickedCustomId, LoadingLabel) {
     }
 
     const Copy = { ...Data };
-    // Received images carry extra read-only details (size, proxy URL...); send back only the URL.
     if (Copy.media?.url) {
         Copy.media = { url: Copy.media.url };
     }

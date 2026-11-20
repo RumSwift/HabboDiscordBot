@@ -3,12 +3,10 @@ import { BuildCustomId } from '../Utils/CustomId.js';
 import { FormatHotel, FormatHotelEmoji, GameLabels, Games } from '../Utils/HotelConfiguration.js';
 import { Colours, Emojis, FormatEmoji, View } from './ComponentStyles.js';
 
-// Read when used, because the emoji IDs are only known once the bot has started.
 const Icon = { get Active() { return FormatEmoji(Emojis.Plus); }, get Inactive() { return FormatEmoji(Emojis.Minus); }, get Neutral() { return FormatEmoji(Emojis.Neutral); } };
 
 export const AuditHistoryPageSize = 20;
 
-// Keep the summary within Discord's 4096-character embed description limit.
 const MaxAccountsShown = 15;
 
 function FormatAccountName(HabboUsername, HotelCode) {

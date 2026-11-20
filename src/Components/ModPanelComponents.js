@@ -53,7 +53,6 @@ export const ModPanelActions = Object.freeze({
 
 export const ProfileReasonInputId = 'ProfileReason';
 
-// Inappropriate Profile: the 1st violation in a server is a warning, the 2nd a kick, the 3rd (and after) a ban.
 export const ProfileStages = Object.freeze([
     { Key: 'Warning', Punishment: '24 Hour Warning', Emoji: '💳' },
     { Key: 'Kick', Punishment: 'User Kicked', Emoji: '👢' },
@@ -80,7 +79,6 @@ const MinuteMs = 60 * 1000;
 const HourMs = 60 * MinuteMs;
 const DayMs = 24 * HourMs;
 
-// Community Rules Violation: the Nth strike in a server gets StrikeTiers[N - 1]; every strike after the last mute is a ban.
 export const StrikeTiers = Object.freeze([
     { Label: '10 Minutes', Ms: 10 * MinuteMs },
     { Label: '3 Hours', Ms: 3 * HourMs },
@@ -94,7 +92,6 @@ export function TierForStrike(PreviousStrikes) {
     return StrikeTiers[Math.min(PreviousStrikes, StrikeTiers.length - 1)];
 }
 
-// Racism: the 1st violation in a server is a 7 day mute, the 2nd (and after) a ban.
 export const RacismTiers = Object.freeze([
     { Label: '7 Days', Ms: 7 * DayMs },
     { Label: 'Ban', Ms: null },
@@ -113,7 +110,6 @@ export const ReasonInputs = Object.freeze({
 export const DirectMessageInputId = 'Message';
 export const MaxDirectMessageLength = 2947;
 
-// Buttons on the panel, by the key carried in their custom ID.
 export const ModPanelButtons = Object.freeze({
     EmergencyMute: 'EmergencyMute',
     Scam: 'Scam',
@@ -157,18 +153,15 @@ export function SanctionLabel(SanctionType) {
     return SanctionDisplay[SanctionType] ?? { Emoji: '•', Label: SanctionType };
 }
 
-// Sanctions that mute the member (unless they were a ban).
 const MutingSanctionTypes = new Set([SanctionTypes.EmergencyMute, SanctionTypes.GuidelinesStrike, SanctionTypes.Racism]);
 
 export function SanctionMuted(Sanction) {
-    // A custom sanction is a mute only when it says so (it can also be a kick or ban).
     if (Sanction.SanctionType === SanctionTypes.Custom) {
         return Boolean(Sanction.Punishment?.startsWith('Muted'));
     }
     return MutingSanctionTypes.has(Sanction.SanctionType) && Sanction.Punishment !== 'User Banned';
 }
 
-// What the member's next sanction of a tiered type will be, given how many of that type still count. Null for other types.
 export function NextSanctionText(SanctionType, Counted) {
     if (SanctionType === SanctionTypes.GuidelinesStrike) {
         const Tier = TierForStrike(Counted);
@@ -196,7 +189,6 @@ function CountOf(Sanctions, SanctionType) {
     return Sanctions.filter((Sanction) => Sanction.SanctionType === SanctionType).length;
 }
 
-// Sanctions is the member's mod history in this server, newest first.
 export function BuildModPanelView(OwnerId, Target, GuildType, Sanctions = []) {
     const HistoryText = Sanctions.length > 0 ? Sanctions.slice(0, MaxHistoryShown).map(FormatSanction).join('\n') : '✅ No current mod history';
     const Counts = {
@@ -294,7 +286,6 @@ export function BuildModPanelView(OwnerId, Target, GuildType, Sanctions = []) {
     return { components: [Container], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } };
 }
 
-// "Are you sure?" before a Scam/Phishing ban. OtherGuildType is null when the other server is not configured.
 export function BuildScamConfirmView(OwnerId, Target, GuildType, OtherGuildType) {
     const Servers = OtherGuildType ? `the **${ServerName(GuildType)}** and **${ServerName(OtherGuildType)}** Discord servers` : `the **${ServerName(GuildType)}** Discord server`;
     const Embed = new EmbedBuilder()
@@ -315,7 +306,6 @@ export function BuildScamConfirmView(OwnerId, Target, GuildType, OtherGuildType)
     return { ...View(Embed, [Row]), allowedMentions: { parse: [] } };
 }
 
-// "Are you sure?" before forgiving the member's last sanction. The buttons carry the sanction's ID, so a newer one is never forgiven by mistake.
 export function BuildForgiveConfirmView(OwnerId, Target, Sanction) {
     const { Emoji, Label } = SanctionLabel(Sanction.SanctionType);
     const Name = Sanction.SanctionLink ? `[**${Label}**](${Sanction.SanctionLink})` : `**${Label}**`;
@@ -350,7 +340,6 @@ export function BuildForgiveConfirmView(OwnerId, Target, Sanction) {
     return { ...View(Embed, [Row]), allowedMentions: { parse: [] } };
 }
 
-// The apology a forgiven member receives. MuteRemoved is true when their mute was lifted.
 export function BuildForgiveDmView(UserId, GuildType, MuteRemoved) {
     const Done = ['• The sanction has been removed from your record.'];
     if (MuteRemoved) {
@@ -400,8 +389,6 @@ export function TextInputRow(Id, Label, Style, Placeholder, MaxLength, Required 
     );
 }
 
-// Internal reason, public reason and a message link (Verbal Warning, Community Rules Violation, Racism).
-// The link to the message or logs is always optional.
 function BuildReasonsModal(Action, Title, OwnerId, TargetId) {
     return new ModalBuilder()
         .setCustomId(BuildCustomId(Action, OwnerId, TargetId))
@@ -444,7 +431,6 @@ function NoteTextInput(Id, Style, Placeholder, MaxLength, Required = true) {
     return new TextInputBuilder().setCustomId(Id).setStyle(Style).setPlaceholder(Placeholder).setRequired(Required).setMaxLength(MaxLength);
 }
 
-// 📝 Add Note: title, note, optional link, and where it is visible (global unless changed).
 export function BuildAddNoteModal(OwnerId, TargetId) {
     return new ModalBuilder()
         .setCustomId(BuildCustomId(ModPanelActions.AddNoteForm, OwnerId, TargetId))
@@ -479,7 +465,6 @@ export function BuildAddNoteModal(OwnerId, TargetId) {
         );
 }
 
-// A formal DM about a sanction: Kind is shown underlined and bold, Outcome (e.g. the mute) goes under the reason.
 const DefaultDmClosing = 'Unfortunately, if this continues, we will have to take further action. We encourage you to read our community guidelines.';
 
 export function BuildSanctionDmView(UserId, GuildType, Kind, PublicReason, Outcome = null, Closing = DefaultDmClosing) {
@@ -496,28 +481,23 @@ export function BuildSanctionDmView(UserId, GuildType, Kind, PublicReason, Outco
     return View(Embed);
 }
 
-// The DM a warned member receives.
 export function BuildVerbalWarningDmView(UserId, GuildType, PublicReason) {
     return BuildSanctionDmView(UserId, GuildType, 'verbal warning', PublicReason);
 }
 
-// The DM a member receives for a community rules strike. Tier.Ms is null for the ban.
 export function BuildCommunityRulesDmView(UserId, GuildType, PublicReason, Tier) {
     const Outcome = Tier.Ms === null ? '**You have been banned from the server.**' : `**You have been muted for ${Tier.Label.toLowerCase()}.**`;
     return BuildSanctionDmView(UserId, GuildType, 'community guidelines strike', PublicReason, Outcome);
 }
 
-// The DM a member receives for a racism violation. Tier.Ms is null for the ban.
 export function BuildRacismDmView(UserId, GuildType, PublicReason, Tier) {
     const Outcome = Tier.Ms === null ? '**You have been banned from the server.**' : `**You have been muted for ${Tier.Label.toLowerCase()}.**`;
     return BuildSanctionDmView(UserId, GuildType, 'racism violation', PublicReason, Outcome, 'Racism and discriminatory behaviour have zero tolerance in our community. We encourage you to read our community guidelines.');
 }
 
-// The DM a member receives for an inappropriate profile, by stage (see ProfileStages).
 export function BuildProfileDmView(UserId, GuildType, Reason, Stage) {
     const Server = ServerName(GuildType);
     const Details = FormatCodeBlock(Reason, 800);
-    // Each body is a list of paragraphs.
     const Messages = {
         Warning: {
             Title: `Profile Violation Warning - ${Server}`,
@@ -560,7 +540,6 @@ export function BuildProfileDmView(UserId, GuildType, Reason, Stage) {
     return View(Embed);
 }
 
-// The DM the member receives.
 export function BuildDirectMessageDmView(UserId, GuildType, MessageText) {
     const Embed = new EmbedBuilder()
         .setTitle(`Formal Message from **${ServerName(GuildType)} Server**`)
@@ -576,13 +555,10 @@ export function BuildDirectMessageDmView(UserId, GuildType, MessageText) {
 export const MaxNotesShown = 25;
 const MaxNotesListLength = 3800;
 
-// Square brackets would break the [title](link) markdown.
 function NoteTitleText(Title) {
     return escapeMarkdown(Title).replace(/[[\]]/g, (Bracket) => `\\${Bracket}`);
 }
 
-// 📋 View Notes: every note this server can see, newest first. Each links to this server's copy of its log,
-// and says where it was added when that was another server. Notes come from ModNoteRepository.GetVisibleNotes.
 export function BuildViewNotesView(Target, GuildId, Notes) {
     const Embed = new EmbedBuilder().setColor(0x98fb98).setTimestamp();
     const AvatarUrl = Target.displayAvatarURL?.();
@@ -592,7 +568,6 @@ export function BuildViewNotesView(Target, GuildId, Notes) {
     if (Notes.length === 0) {
         return View(Embed.setTitle('📋 No Notes Found').setDescription(`No notes found for ${userMention(Target.id)} (${escapeMarkdown(Target.username)}).`));
     }
-    // Stops early if the list would not fit in one embed.
     const Lines = [];
     let Length = 0;
     for (const Note of Notes.slice(0, MaxNotesShown)) {
@@ -616,7 +591,6 @@ export function BuildViewNotesView(Target, GuildId, Notes) {
     return View(Embed);
 }
 
-// Successes self-destruct, problems stay so they can be read.
 export function BuildModPanelResultView(Title, Description, { Success = true, Colour = null } = {}) {
     const Embed = new EmbedBuilder()
         .setTitle(Title)

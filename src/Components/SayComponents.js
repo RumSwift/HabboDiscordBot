@@ -19,11 +19,8 @@ export const SayEmbedTitleInputId = 'Title';
 export const SayEmbedContentInputId = 'Content';
 export const SayEmbedColourInputId = 'Colour';
 
-// Habbo orange: the orange side of the Habbo logo.
 export const DefaultSayEmbedColour = '#FF6600';
 
-// The /sayembed form. Key points at the command's options, which the bot keeps while the form is open.
-// Draft refills the boxes when the form is reopened after a mistake.
 export function BuildSayEmbedModal(OwnerDiscordUserId, Key, ChannelName, Draft = {}) {
     const Input = (Id, Label, Style, MaxLength, Required, Value) => {
         const Builder = new TextInputBuilder().setCustomId(Id).setLabel(Label).setStyle(Style).setRequired(Required).setMaxLength(MaxLength);
@@ -42,7 +39,6 @@ export function BuildSayEmbedModal(OwnerDiscordUserId, Key, ChannelName, Draft =
         );
 }
 
-// Shown when the form had a mistake: the button reopens it with what was typed.
 export function BuildSayEmbedRetryView(OwnerDiscordUserId, Key, Reason) {
     const Embed = new EmbedBuilder().setTitle('Message Not Sent').setDescription(`${Reason} Your title and content are kept: press Try Again to fix it.`).setColor(Colours.Danger);
     const Row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(BuildCustomId(SayEmbedRetryAction, OwnerDiscordUserId, Key)).setLabel('Try Again').setStyle(ButtonStyle.Primary));

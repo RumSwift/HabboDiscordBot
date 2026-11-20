@@ -2,8 +2,6 @@ import { channelMention, EmbedBuilder, roleMention } from 'discord.js';
 import { ChannelSettings, ServerTypes } from '../Admin/AdminSettings.js';
 import { Colours, SelfDestructNote, View } from './ComponentStyles.js';
 
-// Role choices name the game too, because Habbo and Origins share some role types (e.g. VERIFIED_COM).
-// The value is "GuildType:RoleType", or just the role type for roles every server has.
 export const SetupRoleChoices = Object.freeze(
     (() => {
         const Choices = [];
@@ -34,7 +32,6 @@ export function BuildSetupErrorView(Message) {
     return View(new EmbedBuilder().setTitle('Setup').setDescription(Message).setColor(Colours.Danger));
 }
 
-// Everything saved for this server, with what's missing marked.
 export function BuildSetupOverviewView({ ServerType, Saved }) {
     const Line = (Setting, Value) => `${Setting.Label}: ${Value ?? '*not set*'}`;
     const Roles = ServerType.Roles.map((Setting) => Line(Setting, Saved.Roles[Setting.Type] && roleMention(Saved.Roles[Setting.Type])));

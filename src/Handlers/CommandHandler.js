@@ -55,7 +55,6 @@ export function ValidateCommand(Command) {
     if (typeof Command.Execute !== 'function') {
         return 'Execute must be a function';
     }
-    // Staff commands must be hidden from members without Manage Messages, as well as checked when run.
     if (Command.StaffOnly && Command.Data.toJSON().default_member_permissions !== String(StaffPermission)) {
         return 'a StaffOnly command must use setDefaultMemberPermissions(StaffPermission)';
     }

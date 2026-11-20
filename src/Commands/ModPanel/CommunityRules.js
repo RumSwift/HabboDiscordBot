@@ -7,7 +7,6 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// ⚒️ Community Rules Violation (Moderate User menu): asks for the reasons first.
 export async function ShowCommunityRulesModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildCommunityRulesModal(Interaction.user.id, TargetId));
 }
@@ -22,8 +21,6 @@ async function SendDm(Member, Context, ViewData) {
     }
 }
 
-// The form was sent: the member's next tier in this server is applied (a mute, or a ban after the last mute),
-// they are DMed, it is logged in Mod Actions (and the ban log for a ban) and recorded in their history.
 export async function HandleCommunityRulesForm(Interaction, Context, { TargetId }) {
     const Field = (Id) => Interaction.fields.getTextInputValue(Id).trim();
     const PrivateReason = Field(ReasonInputs.PrivateReason);
@@ -82,7 +79,6 @@ export async function HandleCommunityRulesForm(Interaction, Context, { TargetId 
     let Delivered;
     let LogMessage;
     if (IsBan) {
-        // DMed while they still share a server with the bot, and logged in the ban log before the ban.
         Delivered = await SendDm(Member, Context, DmView);
         const [BanLogMessage, ModActionsMessage] = await Promise.all([Log(LogChannelTypes.BanLog, Delivered), Log(LogChannelTypes.ModActions, Delivered)]);
         LogMessage = ModActionsMessage;
@@ -90,7 +86,6 @@ export async function HandleCommunityRulesForm(Interaction, Context, { TargetId 
             await Member.ban({ reason: AuditReason });
         } catch (BanError) {
             Context.Logger.Warn('Community rules ban failed', { GuildId: Interaction.guildId, DiscordUserId: TargetId, Error: BanError });
-            // The logs said they were banned; take them back down.
             await Promise.all([BanLogMessage, ModActionsMessage].filter(Boolean).map((Message) => Message.delete().catch(() => {})));
             await Fail(`This is strike #${StrikeNumber}, which is a **ban**, but Discord refused the ban. Please try again or contact Habbo Staff.`);
             return;

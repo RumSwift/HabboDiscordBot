@@ -7,13 +7,11 @@ import { ClosePanel } from './OpenPanels.js';
 
 const MaxPreviewLength = 300;
 
-// What each stage needs Discord to allow, and how it is described when it cannot be done.
 const StageActions = Object.freeze({
     Kick: { Allowed: (Member) => Member.kickable, Verb: 'kick', Permission: 'Kick Members', Apply: (Member, Reason) => Member.kick(Reason) },
     Ban: { Allowed: (Member) => Member.bannable, Verb: 'ban', Permission: 'Ban Members', Apply: (Member, Reason) => Member.ban({ reason: Reason }) },
 });
 
-// 🃏 Inappropriate Profile (Moderate User menu): asks what is wrong with their profile first.
 export async function ShowProfileModal(Interaction, Context, { TargetId }) {
     await Interaction.showModal(BuildProfileModal(Interaction.user.id, TargetId));
 }
@@ -28,8 +26,6 @@ async function SendDm(Member, Context, ViewData) {
     }
 }
 
-// The form was sent. Counting earlier violations in this server: a 24 hour warning, then a kick, then a ban.
-// The member is DMed first (they cannot be reached once removed) and it is logged in Mod Actions, plus the ban log for a ban.
 export async function HandleProfileForm(Interaction, Context, { TargetId }) {
     const Reason = Interaction.fields.getTextInputValue(ProfileReasonInputId).trim();
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -74,7 +70,6 @@ export async function HandleProfileForm(Interaction, Context, { TargetId }) {
             Context.Logger.Error('Could not log inappropriate profile action', { ChannelType, Error: LogError });
             return null;
         });
-    // A ban is posted in the ban log as well, before the ban.
     const ChannelTypes = Stage.Key === 'Ban' ? [LogChannelTypes.BanLog, LogChannelTypes.ModActions] : [LogChannelTypes.ModActions];
     const Posted = await Promise.all(ChannelTypes.map(Log));
     const LogMessage = Posted[Posted.length - 1];
@@ -84,7 +79,6 @@ export async function HandleProfileForm(Interaction, Context, { TargetId }) {
             await Removal.Apply(Member, `Inappropriate Profile (violation #${PreviousViolations + 1}) by ${Moderator.username}`);
         } catch (RemovalError) {
             Context.Logger.Warn('Inappropriate profile removal failed', { GuildId: Interaction.guildId, DiscordUserId: TargetId, Stage: Stage.Key, Error: RemovalError });
-            // The logs said they were removed; take them back down.
             await Promise.all(Posted.filter(Boolean).map((Message) => Message.delete().catch(() => {})));
             await Fail(`This is violation #${PreviousViolations + 1}, which is a **${Removal.Verb}**, but Discord refused it. Please try again or contact Habbo Staff.`);
             return;

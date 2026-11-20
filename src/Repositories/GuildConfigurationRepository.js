@@ -20,10 +20,8 @@ export const LogChannelTypes = Object.freeze({
     Notes: 'NOTES',
 });
 
-// Role pinged on /dmmod messages (GuildRoles.RoleType).
 export const DmModPingRoleType = 'COM_MOD';
 
-// Head moderators: like moderators, may use the staff commands, but are not pinged.
 export const HeadModRoleType = 'HEAD_MOD';
 
 export const ExclusionOutcomes = Object.freeze({
@@ -34,7 +32,6 @@ export const ExclusionOutcomes = Object.freeze({
     NotExcluded: 'NOT_EXCLUDED',
 });
 
-// TINYINT(1) comes back as 0/1.
 function ToGuild(Row) {
     return { ...Row, EnforceNicknames: Boolean(Number(Row.EnforceNicknames)) };
 }
@@ -44,7 +41,6 @@ export class GuildConfigurationRepository {
         this.Pool = Pool;
     }
 
-    // Fills the tables only while Guilds is empty (used by the tests). Real servers are set up on the admin page.
     async SeedIfEmpty(GuildSeed, { Logger, Now = new Date() } = {}) {
         return WithTransaction(this.Pool, async (Connection) => {
             const [Existing] = await Connection.query('SELECT COUNT(*) AS GuildCount FROM Guilds FOR UPDATE');
@@ -70,7 +66,6 @@ export class GuildConfigurationRepository {
                 }
                 for (const Channel of Guild.LogChannels) {
                     await Connection.query('INSERT INTO GuildLogChannels (GuildUuid, ChannelType, ChannelId) VALUES (?, ?, ?)', [GuildUuid, Channel.ChannelType, Channel.ChannelId]);
-                    // Notifications queued before servers were configured have no channel; send them to the Habbo log.
                     if (Guild.GuildType === Games.Habbo && Channel.ChannelType === LogChannelTypes.Verification) {
                         await Connection.query(
                             "UPDATE AuditNotificationOutbox SET ChannelId = ? WHERE ChannelId IS NULL AND Status IN ('PENDING', 'PROCESSING')",
@@ -89,7 +84,6 @@ export class GuildConfigurationRepository {
         return Rows.map(ToGuild);
     }
 
-    // Servers where verified members' nicknames are enforced, as GuildId -> GuildType.
     async GetNicknameGuildTypesById(Executor = this.Pool) {
         const Guilds = await this.GetGuilds(Executor);
         return new Map(Guilds.filter((Guild) => Guild.EnforceNicknames).map((Guild) => [Guild.GuildId, Guild.GuildType]));
@@ -116,7 +110,6 @@ export class GuildConfigurationRepository {
         return Rows;
     }
 
-    // Every verification role configured for one server.
     async GetRoleIdsForGuild(GuildId, Executor = this.Pool) {
         const [Rows] = await Executor.query(
             `SELECT r.RoleId
@@ -194,7 +187,6 @@ export class GuildConfigurationRepository {
         }
     }
 
-    // Everything the admin page shows: each configured server with its roles, log channels and log exclusions.
     async GetConfiguration() {
         const [Guilds, [Roles], [Channels], [Exclusions]] = await Promise.all([
             this.GetGuilds(),
@@ -211,10 +203,6 @@ export class GuildConfigurationRepository {
         }));
     }
 
-    // Creates or updates the one server of a type (HABBO / ORIGINS) and replaces its roles and log channels.
-    // Roles and Channels map a type to an ID; an empty value removes that setting. Types not listed are left alone.
-    // A server is never deleted, because its moderation history refers to it; changing GuildId moves the settings to another server.
-    // EnforceNicknames is left as it is when not given (new servers default to on).
     async SaveGuild({ GuildType, Name, GuildId, EnforceNicknames, Roles = {}, Channels = {} }, Now = new Date()) {
         return WithTransaction(this.Pool, async (Connection) => {
             const [Existing] = await Connection.query('SELECT GuildUuid FROM Guilds WHERE GuildType = ? ORDER BY CreatedTimestamp LIMIT 1 FOR UPDATE', [GuildType]);
@@ -257,7 +245,6 @@ export class GuildConfigurationRepository {
                 }
             }
 
-            // Verification notifications queued before any log channel was set have no channel; send them to the Habbo log.
             if (GuildType === Games.Habbo && Channels[LogChannelTypes.Verification]) {
                 await Connection.query("UPDATE AuditNotificationOutbox SET ChannelId = ? WHERE ChannelId IS NULL AND Status IN ('PENDING', 'PROCESSING')", [
                     Channels[LogChannelTypes.Verification],

@@ -22,7 +22,6 @@ export const Colours = Object.freeze({
     Neutral: 0x95a5a6,
 });
 
-// Custom emojis, uploaded to the bot application automatically on start (see Utils/ApplicationEmojis.js).
 export const Emojis = Object.freeze({
     Plus: ApplicationEmoji('Plus', '1558790263084810240', '➕'),
     Minus: ApplicationEmoji('Minus', '1558790261600161872', '➖'),
@@ -45,7 +44,6 @@ export const Thumbnails = Object.freeze({
     Unlinked: `${FrankImageBaseUrl}/frank_08.gif`,
 });
 
-// Discord requires slash command names to be lowercase, so /VerifyHabbo is registered as /verifyhabbo.
 export const VerifyCommandName = 'verifyhabbo';
 export const VerifyCommandText = `/${VerifyCommandName}`;
 
@@ -84,7 +82,6 @@ export function View(Embed, Rows = []) {
     return { components: [Container], flags: MessageFlags.IsComponentsV2 };
 }
 
-// Confirmation replies show this in the footer and are deleted after SelfDestructSeconds.
 export const SelfDestructSeconds = 10;
 export const SelfDestructNote = `This message will self destruct in ${SelfDestructSeconds} seconds`;
 
