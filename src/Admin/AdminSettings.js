@@ -27,8 +27,8 @@ export const ChannelSettings = Object.freeze(
 export function GetRoleSettings(Game) {
     return [
         ...GetHotelsForGame(Game).map((Hotel) => ({ Type: Hotel.RoleType, Group: 'Verified roles', Label: Hotel.Label, Description: `Given to members who verify a ${Hotel.ShortName} account.` })),
-        { Type: DmModPingRoleType, Group: 'Mod team', Label: 'Moderator role', Description: 'Can use the staff commands. Pinged on new /dmmod messages and mod mail.' },
-        { Type: HeadModRoleType, Group: 'Mod team', Label: 'Head moderator role', Description: 'Can use the staff commands, including /setup. Not pinged.' },
+        { Type: DmModPingRoleType, Group: 'Mod team', Label: 'Moderator role', Description: 'Can use the staff commands except /setup, /stoplogs and /startlogs. Pinged on new /dmmod messages and mod mail.' },
+        { Type: HeadModRoleType, Group: 'Mod team', Label: 'Head moderator role', Description: 'Can use all the staff commands, including /setup, /stoplogs and /startlogs. Not pinged.' },
     ];
 }
 

@@ -4,6 +4,7 @@ import { ExecuteStartLogsCommand } from '../Flows/LogExclusionFlow.js';
 
 export default {
     StaffOnly: true,
+    HeadModOnly: true,
     Data: new SlashCommandBuilder()
         .setName('startlogs')
         .setDescription('Staff: log a channel again after /stoplogs.')

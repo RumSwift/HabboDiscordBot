@@ -10,7 +10,7 @@ function MemberRoleIds(Member) {
     return Array.isArray(Member.roles) ? Member.roles : [...(Member.roles?.cache?.keys?.() ?? [])];
 }
 
-export async function IsStaff(Interaction, GuildConfigurationRepository) {
+export async function IsStaff(Interaction, GuildConfigurationRepository, { HeadModOnly = false } = {}) {
     const Permissions = Interaction.memberPermissions;
     if (!Interaction.guildId || !Permissions) {
         return false;
@@ -21,9 +21,11 @@ export async function IsStaff(Interaction, GuildConfigurationRepository) {
     if (!Permissions.has(StaffPermission)) {
         return false;
     }
-    const StaffRoleIds = await Promise.all([DmModPingRoleType, HeadModRoleType].map((Type) => GuildConfigurationRepository.GetRoleId(Interaction.guildId, Type)));
+    const RoleTypes = HeadModOnly ? [HeadModRoleType] : [DmModPingRoleType, HeadModRoleType];
+    const StaffRoleIds = await Promise.all(RoleTypes.map((Type) => GuildConfigurationRepository.GetRoleId(Interaction.guildId, Type)));
     const Held = new Set(MemberRoleIds(Interaction.member));
     return StaffRoleIds.some((RoleId) => RoleId && Held.has(RoleId));
 }
 
 export const StaffOnlyMessage = 'Only server administrators, moderators and head moderators can use this command.';
+export const HeadModOnlyMessage = 'Naughty Naughty, Staff and head mod only';

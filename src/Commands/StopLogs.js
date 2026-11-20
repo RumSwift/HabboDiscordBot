@@ -4,6 +4,7 @@ import { ExecuteStopLogsCommand } from '../Flows/LogExclusionFlow.js';
 
 export default {
     StaffOnly: true,
+    HeadModOnly: true,
     Data: new SlashCommandBuilder()
         .setName('stoplogs')
         .setDescription('Staff: stop logging a channel (or every channel in a category).')

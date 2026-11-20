@@ -4,6 +4,7 @@ import { ExecuteSetupCommand } from '../Flows/SetupFlow.js';
 
 export default {
     StaffOnly: true,
+    HeadModOnly: true,
     Data: new SlashCommandBuilder()
         .setName('setup')
         .setDescription('Staff: set this server\'s type, roles and log channels.')
