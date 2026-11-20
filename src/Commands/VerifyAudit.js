@@ -2,6 +2,8 @@ import { InteractionContextType, SlashCommandBuilder } from 'discord.js';
 import { AuditPermission, ExecuteVerifyAuditCommand, HandleAuditHistory, HandleAuditSummary } from '../Flows/AuditFlow.js';
 
 export default {
+    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
+    StaffOnly: true,
     // Discord only allows lowercase command names, so "VerifyAudit" is registered as "verifyaudit".
     Data: new SlashCommandBuilder()
         .setName('verifyaudit')

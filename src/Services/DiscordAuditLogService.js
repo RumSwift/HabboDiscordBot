@@ -15,11 +15,13 @@ function FormatTimestamp(Value) {
     return `${time(DateValue, TimestampStyles.LongDateTime)} (${time(DateValue, TimestampStyles.RelativeTime)})`;
 }
 
-// Origins has no avatar image service, so Origins events have no picture.
+// Habbo hotels serve avatar images themselves; Origins avatars come from Frankly Origins (no gestures there).
 export function BuildAvatarImageUrl(HotelCode, HabboUsername, Gesture) {
     const Hotel = GetHotel(HotelCode);
-    if (Hotel.Game !== Games.Habbo) {
-        return null;
+    if (Hotel.Game === Games.Origins) {
+        return Hotel.ImageHotel
+            ? `https://img.franklyorigins.net/habbo-imaging/avatarimage?habbo=${encodeURIComponent(HabboUsername)}&hotel=${Hotel.ImageHotel}&direction=4&head_only=true`
+            : null;
     }
     const Query = `user=${encodeURIComponent(HabboUsername)}&direction=4&head_direction=3&gesture=${Gesture}&size=m&headonly=1`;
     return `https://${Hotel.Hostname}/habbo-imaging/avatarimage?${Query}`;

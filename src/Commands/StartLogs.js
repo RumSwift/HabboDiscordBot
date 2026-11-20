@@ -3,6 +3,8 @@ import { AuditPermission } from '../Flows/AuditFlow.js';
 import { ExecuteStartLogsCommand } from '../Flows/LogExclusionFlow.js';
 
 export default {
+    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
+    StaffOnly: true,
     Data: new SlashCommandBuilder()
         .setName('startlogs')
         .setDescription('Staff: log a channel again after /stoplogs.')

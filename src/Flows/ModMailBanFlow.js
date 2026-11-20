@@ -6,7 +6,7 @@ import { FormatBanEnd, ModMailBanLogActions } from '../Services/Logging/ModActio
 import { CloseModMailForBan } from './ModMailFlow.js';
 import { ScheduleSelfDestruct, ShowLoading } from './FlowHelpers.js';
 
-export const ModMailBanPermission = PermissionFlagsBits.ModerateMembers;
+export const ModMailBanPermission = PermissionFlagsBits.ManageMessages;
 
 function HasPermission(Interaction) {
     return Boolean(Interaction.memberPermissions?.has(ModMailBanPermission));

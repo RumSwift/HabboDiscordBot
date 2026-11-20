@@ -4,6 +4,8 @@ import { AuditPermission } from '../Flows/AuditFlow.js';
 import { ExecuteSayEmbedCommand, HandleSayEmbedModal, HandleSayEmbedRetry } from '../Flows/SayFlow.js';
 
 export default {
+    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
+    StaffOnly: true,
     Data: new SlashCommandBuilder()
         .setName('sayembed')
         .setDescription('Staff: send an embed as the bot. Opens a form for the title, content and colour.')
@@ -23,7 +25,8 @@ export default {
         )
         .addStringOption((Option) => Option.setName('image_link').setDescription('Link to an image for the embed (used instead of an upload)').setMaxLength(2000))
         .addAttachmentOption((Option) => Option.setName('image_upload').setDescription('Image for the embed (ignored when an image link is given)'))
-        .addRoleOption((Option) => Option.setName('tag').setDescription('Role to ping above the embed')),
+        .addRoleOption((Option) => Option.setName('tag').setDescription('Role to ping above the embed (pick @everyone to ping everyone)'))
+        .addBooleanOption((Option) => Option.setName('tag_here').setDescription('Ping @here above the embed (instead of a role)')),
 
     Execute: ExecuteSayEmbedCommand,
     ModalHandlers: { [SayEmbedModalAction]: HandleSayEmbedModal },

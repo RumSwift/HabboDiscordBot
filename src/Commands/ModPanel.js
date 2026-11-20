@@ -2,6 +2,8 @@ import { InteractionContextType, SlashCommandBuilder } from 'discord.js';
 import { ExecuteModPanelCommand, ModPanelHandlers, ModPanelModalHandlers, ModPanelPermission } from './ModPanel/Panel.js';
 
 export default {
+    // Hidden without Manage Messages, and only runs for admins, moderators and head moderators (Utils/StaffAccess.js).
+    StaffOnly: true,
     Data: new SlashCommandBuilder()
         .setName('modpanel')
         .setDescription('Open moderation panel for a user')

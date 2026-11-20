@@ -24,10 +24,12 @@ export function BuildSayCard(Staff, Message, { Now = new Date() } = {}) {
 export function BuildSayEmbedCard(Staff, Message, { Now = new Date() } = {}) {
     const Embed = Message.embeds?.[0] ?? {};
     const Fields = [{ Label: 'Channel', Value: channelMention(Message.channelId) }];
-    // The role pinged above the embed. Log cards never ping, so this is safe to show.
+    // The ping above the embed. Log cards never ping, and @everyone/@here are shown as code so they stay inert.
     const TaggedRoleId = /^<@&(\d{17,20})>$/.exec(Message.content ?? '')?.[1];
     if (TaggedRoleId) {
         Fields.push({ Label: 'Tagged', Value: roleMention(TaggedRoleId) });
+    } else if (['@everyone', '@here'].includes(Message.content)) {
+        Fields.push({ Label: 'Tagged', Value: `\`${Message.content}\`` });
     }
     if (Embed.title) {
         Fields.push({ Label: 'Title', Value: FormatCodeBlock(Embed.title, 256) });

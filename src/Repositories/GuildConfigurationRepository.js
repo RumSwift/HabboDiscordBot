@@ -23,6 +23,9 @@ export const LogChannelTypes = Object.freeze({
 // Role pinged on /dmmod messages (GuildRoles.RoleType).
 export const DmModPingRoleType = 'COM_MOD';
 
+// Head moderators: like moderators, may use the staff commands, but are not pinged.
+export const HeadModRoleType = 'HEAD_MOD';
+
 export const ExclusionOutcomes = Object.freeze({
     NotConfigured: 'NOT_CONFIGURED',
     Added: 'ADDED',

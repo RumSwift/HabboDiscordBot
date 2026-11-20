@@ -18,6 +18,7 @@ const FlagEmojis = {
 };
 
 // RoleType is looked up in GuildRoles, only in servers whose GuildType matches the hotel's Game.
+// ImageHotel (Origins only) is the hotel= value for the Frankly Origins avatar image service.
 export const Hotels = Object.freeze([
     { HotelCode: 'COM', Emoji: FlagEmojis.ComFlag, Game: Games.Habbo, Label: 'Habbo.com (English)', Hostname: 'www.habbo.com', NicknameTag: 'COM', ShortName: 'COM', RoleType: 'VERIFIED_COM' },
     { HotelCode: 'COM_BR', Emoji: FlagEmojis.BrazillianFlag, Game: Games.Habbo, Label: 'Habbo.com.br (Português)', Hostname: 'www.habbo.com.br', NicknameTag: 'BR', ShortName: 'COM_BR', RoleType: 'VERIFIED_COM_BR' },
@@ -28,9 +29,9 @@ export const Hotels = Object.freeze([
     { HotelCode: 'IT', Emoji: FlagEmojis.ItalianFlag, Game: Games.Habbo, Label: 'Habbo.it (Italiano)', Hostname: 'www.habbo.it', NicknameTag: 'IT', ShortName: 'IT', RoleType: 'VERIFIED_IT' },
     { HotelCode: 'NL', Emoji: FlagEmojis.NetherlandsFlag, Game: Games.Habbo, Label: 'Habbo.nl (Nederlands)', Hostname: 'www.habbo.nl', NicknameTag: 'NL', ShortName: 'NL', RoleType: 'VERIFIED_NL' },
     { HotelCode: 'COM_TR', Emoji: FlagEmojis.TurkishFlag, Game: Games.Habbo, Label: 'Habbo.com.tr (Türkçe)', Hostname: 'www.habbo.com.tr', NicknameTag: 'TR', ShortName: 'COM_TR', RoleType: 'VERIFIED_COM_TR' },
-    { HotelCode: 'ORIGINS_COM', Emoji: FlagEmojis.ComFlag, Game: Games.Origins, Label: 'Origins .com (English)', Hostname: 'origins.habbo.com', NicknameTag: 'COM', ShortName: 'Origins COM', RoleType: 'VERIFIED_COM' },
-    { HotelCode: 'ORIGINS_ES', Emoji: FlagEmojis.SpannishFlag, Game: Games.Origins, Label: 'Origins .es (Español)', Hostname: 'origins.habbo.es', NicknameTag: 'ES', ShortName: 'Origins ES', RoleType: 'VERIFIED_ES' },
-    { HotelCode: 'ORIGINS_BR', Emoji: FlagEmojis.BrazillianFlag, Game: Games.Origins, Label: 'Origins .com.br (Português)', Hostname: 'origins.habbo.com.br', NicknameTag: 'BR', ShortName: 'Origins BR', RoleType: 'VERIFIED_BR' },
+    { HotelCode: 'ORIGINS_COM', Emoji: FlagEmojis.ComFlag, Game: Games.Origins, Label: 'Origins .com (English)', Hostname: 'origins.habbo.com', ImageHotel: 'COM', NicknameTag: 'COM', ShortName: 'Origins COM', RoleType: 'VERIFIED_COM' },
+    { HotelCode: 'ORIGINS_ES', Emoji: FlagEmojis.SpannishFlag, Game: Games.Origins, Label: 'Origins .es (Español)', Hostname: 'origins.habbo.es', ImageHotel: 'ES', NicknameTag: 'ES', ShortName: 'Origins ES', RoleType: 'VERIFIED_ES' },
+    { HotelCode: 'ORIGINS_BR', Emoji: FlagEmojis.BrazillianFlag, Game: Games.Origins, Label: 'Origins .com.br (Português)', Hostname: 'origins.habbo.com.br', ImageHotel: 'BR', NicknameTag: 'BR', ShortName: 'Origins BR', RoleType: 'VERIFIED_BR' },
 ].map((Hotel) => Object.freeze(Hotel)));
 
 const HotelsByCode = new Map(Hotels.map((Hotel) => [Hotel.HotelCode, Hotel]));

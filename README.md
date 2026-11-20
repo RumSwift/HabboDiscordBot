@@ -19,7 +19,7 @@ It can serve one Habbo server, one Habbo Origins server, or both.
 1. In the [Discord developer portal](https://discord.com/developers/applications), create an application.
 2. Under **Bot**, copy the token, then turn on both privileged intents: **Server Members** and **Message Content**.
 3. Under **General Information**, copy the **Application ID**.
-4. Invite the bot to your server(s) with the `bot` and `applications.commands` scopes. Give it **Manage Roles**, **Manage Nicknames**, **Moderate Members**, **Kick Members**, **Ban Members**, **View Audit Log**, **Manage Threads**, **Create Public Threads**, **Send Messages**, **Send Messages in Threads**, **Embed Links**, **Attach Files** and **Read Message History**. In each server, move the bot's role above the verified roles it hands out. Optionally, also give it **Mention @everyone, @here and All Roles**: without it, `/sayembed` can only tag roles that are set as mentionable.
+4. Invite the bot to your server(s) with the `bot` and `applications.commands` scopes. Give it **Manage Roles**, **Manage Nicknames**, **Moderate Members**, **Kick Members**, **Ban Members**, **View Audit Log**, **Manage Threads**, **Create Public Threads**, **Send Messages**, **Send Messages in Threads**, **Embed Links**, **Attach Files** and **Read Message History**. In each server, move the bot's role above the verified roles it hands out. Optionally, also give it **Mention @everyone, @here and All Roles**: without it, `/sayembed` can't tag @everyone or @here, and can only tag roles that are set as mentionable.
 
 The bot uploads its own custom emojis (flags, arrows and so on, from `assets/emojis/`) to your application the first time it starts. You don't need to do anything for this.
 
@@ -37,7 +37,7 @@ Fill in `.env`. Every value is explained in the file. You need:
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Your MariaDB connection. The database is created if it doesn't exist (this needs the CREATE permission; otherwise create an empty database yourself). |
 | `DISCORD_TOKEN`, `DISCORD_CLIENT_ID` | From step 1. |
 | `INTERNAL_API_KEY`, `VERIFICATION_CODE_SECRET` | Random secrets, at least 32 characters each. |
-| `ADMIN_PASSWORD` | The password for the admin page, at least 16 characters. |
+| `ADMIN_PASSWORD` | Optional. The password for the admin page, at least 16 characters. Leave it empty to use only `/setup`. |
 
 To generate a secret:
 
@@ -45,7 +45,7 @@ To generate a secret:
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
-The `.env` file holds only secrets and settings. It has no server, role or channel IDs: those are set on the admin page.
+The `.env` file holds only secrets and settings. It has no server, role or channel IDs: those are set with `/setup` or on the admin page.
 
 ## 3. Start
 
@@ -56,6 +56,33 @@ npm start
 On every start the bot creates the database and any missing tables or columns. It never changes or deletes existing tables, columns or data. To prepare the database without starting the bot, run `npm run setup-db`.
 
 ## 4. Choose your servers, roles and log channels
+
+You can do this in Discord with `/setup` (easiest) or on the admin page. Both save to the same place, and changes take effect straight away.
+
+### With /setup
+
+In each server, run:
+
+1. `/setup server type:Habbo server` (or `Habbo Origins server`).
+2. `/setup role` for each hotel's verified role, the moderator role and the head moderator role.
+3. `/setup channel` for each log. Leave out the channel to turn a log off.
+4. `/setup nicknames enabled:True/False` to choose whether verified members are renamed to `HabboName (HOTEL)`.
+5. `/setup view` to check everything, with anything not set yet marked.
+
+### Who can use the commands
+
+`/verifyhabbo` and `/dmmod` are for everyone. Every other command, `/setup` included, is a staff command:
+
+- **Hidden:** members without the **Manage Messages** permission don't see staff commands in the command list.
+- **Checked:** when a staff command is run, the bot also checks the member is a server **administrator**, or has **Manage Messages** *and* this server's **moderator** or **head moderator** role (set with `/setup role`).
+
+So on a fresh server, only administrators can use the staff commands until those two roles are set. Run `/setup server`, then `/setup role` for the moderator and head moderator roles, first.
+
+If a server already holds the Habbo or Origins slot, `/setup server` won't move that slot to a different server while the bot is still in the old one. That way, running it in the wrong server can't break a working setup. To move a slot, remove the bot from the old server first, or change the server ID on the admin page.
+
+Turn off **Public Bot** under **Bot** in the developer portal, so only you can invite the bot.
+
+### With the admin page
 
 Open **http://127.0.0.1:3000/admin/** (the address uses `API_HOST` and `API_PORT`) and sign in with `ADMIN_PASSWORD`.
 

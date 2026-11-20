@@ -1,5 +1,5 @@
 import { ChannelType } from 'discord.js';
-import { DmModPingRoleType, LogChannelTypes } from '../Repositories/GuildConfigurationRepository.js';
+import { DmModPingRoleType, HeadModRoleType, LogChannelTypes } from '../Repositories/GuildConfigurationRepository.js';
 import { GameLabels, Games, GetHotelsForGame } from '../Utils/HotelConfiguration.js';
 
 // Everything that can be set per server on the admin page. Add a log channel or role type here to show it on the page.
@@ -29,7 +29,8 @@ export const ChannelSettings = Object.freeze(
 export function GetRoleSettings(Game) {
     return [
         ...GetHotelsForGame(Game).map((Hotel) => ({ Type: Hotel.RoleType, Group: 'Verified roles', Label: Hotel.Label, Description: `Given to members who verify a ${Hotel.ShortName} account.` })),
-        { Type: DmModPingRoleType, Group: 'Mod team', Label: 'Moderator role', Description: 'Pinged on new /dmmod messages and mod mail.' },
+        { Type: DmModPingRoleType, Group: 'Mod team', Label: 'Moderator role', Description: 'Can use the staff commands. Pinged on new /dmmod messages and mod mail.' },
+        { Type: HeadModRoleType, Group: 'Mod team', Label: 'Head moderator role', Description: 'Can use the staff commands, including /setup. Not pinged.' },
     ];
 }
 

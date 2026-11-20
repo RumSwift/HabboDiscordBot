@@ -77,7 +77,41 @@ export class AdminService {
         }
     }
 
-    async SaveServer(GuildType, Body) {
+    // /setup server: makes the Discord server it is run in the Habbo or Origins server.
+    // A slot that already belongs to another server is only handed over once the bot has left that server,
+    // so running it in the wrong server can't take over a working setup. Moving a slot clears its old roles and channels.
+    async ClaimServer(GuildType, GuildId, { Source } = {}) {
+        const ServerType = RequireServerType(GuildType);
+        RequireSnowflake(GuildId, 'Server ID');
+        const Saved = await this.GuildConfigurationRepository.GetGuilds();
+        const Other = Saved.find((Row) => Row.GuildId === GuildId && Row.GuildType !== GuildType);
+        if (Other) {
+            const OtherLabel = ServerTypes.find((Type) => Type.GuildType === Other.GuildType)?.Label ?? 'other server';
+            throw new ApiError(409, 'SERVER_IN_USE', `This server is already set up as the ${OtherLabel}.`);
+        }
+        const Current = Saved.find((Row) => Row.GuildType === GuildType);
+        if (Current?.GuildId === GuildId) {
+            return { Outcome: 'Unchanged' };
+        }
+        if (Current && this.Client?.guilds?.cache?.has(Current.GuildId)) {
+            throw new ApiError(409, 'SLOT_TAKEN', `The ${ServerType.Label} is already ${Current.Name} (${Current.GuildId}). To move it here, remove the bot from that server first, or change it on the admin page.`);
+        }
+        const Clear = (Settings) => (Current ? Object.fromEntries(Settings.map((Setting) => [Setting.Type, ''])) : {});
+        await this.SaveServer(GuildType, { GuildId, Roles: Clear(ServerType.Roles), Channels: Clear(ServerType.Channels) }, { Source });
+        return { Outcome: Current ? 'Moved' : 'Claimed', PreviousName: Current?.Name ?? null };
+    }
+
+    // The saved server type for a Discord server, or null if it isn't set up.
+    async FindServer(GuildId) {
+        const Saved = await this.GuildConfigurationRepository.GetConfiguration();
+        const Guild = Saved.find((Row) => Row.GuildId === GuildId);
+        if (!Guild) {
+            return null;
+        }
+        return { ServerType: RequireServerType(Guild.GuildType), Saved: Guild };
+    }
+
+    async SaveServer(GuildType, Body, { Source = 'the admin page' } = {}) {
         const ServerType = RequireServerType(GuildType);
         if (typeof Body !== 'object' || Body === null) {
             throw new ApiError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
@@ -103,7 +137,7 @@ export class AdminService {
             }
             throw SaveError;
         }
-        this.Logger?.Info('Server settings saved from the admin page', { GuildType, GuildId });
+        this.Logger?.Info(`Server settings saved from ${Source}`, { GuildType, GuildId });
         await this.NotifyChanged();
     }
 

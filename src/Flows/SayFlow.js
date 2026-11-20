@@ -126,22 +126,43 @@ export function ReadSayEmbedOptions(Interaction, Channel) {
         ImageUpload = { Url: Upload.url, FileName: `sayembed.${Extension}` };
     }
 
-    const Role = Interaction.options.getRole('tag');
-    if (Role) {
-        // Like /say, the bot never pings everyone.
-        if (Role.id === Interaction.guildId) {
-            return { Error: 'Tagging @everyone is not allowed. Pick a role.' };
-        }
-        // A role that is not mentionable only pings when the sender has "Mention @everyone, @here and All Roles".
-        const CanPing = (Permissions) => Boolean(Role.mentionable || Permissions?.has(PermissionFlagsBits.MentionEveryone));
-        if (!CanPing(Interaction.member?.permissionsIn?.(Channel))) {
-            return { Error: `You cannot ping ${roleMention(Role.id)} in that channel yourself, so the bot will not either.` };
-        }
-        if (!CanPing(Channel.permissionsFor?.(Interaction.guild.members.me))) {
-            return { Error: `The bot cannot ping ${roleMention(Role.id)} there. Make the role mentionable, or give the bot "Mention @everyone, @here and All Roles".` };
-        }
+    const Tag = ReadSayEmbedTag(Interaction, Channel);
+    if (Tag.Error) {
+        return Tag;
     }
-    return { Options: { ImageLink, ImageUpload, RoleId: Role?.id ?? null } };
+    return { Options: { ImageLink, ImageUpload, Tag: Tag.Tag } };
+}
+
+// The ping above the embed: a role, @everyone (picked as the @everyone role) or @here.
+// Returns { Tag: { Content, AllowedMentions } | null } or { Error }.
+function ReadSayEmbedTag(Interaction, Channel) {
+    const Role = Interaction.options.getRole('tag');
+    const Here = Interaction.options.getBoolean?.('tag_here') === true;
+    if (Role && Here) {
+        return { Error: 'Pick a role to tag or @here, not both.' };
+    }
+    if (!Role && !Here) {
+        return { Tag: null };
+    }
+
+    const IsEveryone = Here || Role.id === Interaction.guildId;
+    const Label = Here ? '@here' : IsEveryone ? '@everyone' : roleMention(Role.id);
+    // @everyone, @here and roles that are not mentionable only ping with "Mention @everyone, @here and All Roles".
+    const CanPing = (Permissions) => Boolean((!IsEveryone && Role.mentionable) || Permissions?.has(PermissionFlagsBits.MentionEveryone));
+    if (!CanPing(Interaction.member?.permissionsIn?.(Channel))) {
+        return { Error: `You cannot ping ${Label} in that channel yourself, so the bot will not either.` };
+    }
+    if (!CanPing(Channel.permissionsFor?.(Interaction.guild.members.me))) {
+        return {
+            Error: IsEveryone
+                ? `The bot cannot ping ${Label} there. Give it "Mention @everyone, @here and All Roles".`
+                : `The bot cannot ping ${Label} there. Make the role mentionable, or give the bot "Mention @everyone, @here and All Roles".`,
+        };
+    }
+    if (IsEveryone) {
+        return { Tag: { Content: Here ? '@here' : '@everyone', AllowedMentions: { parse: ['everyone'], roles: [] } } };
+    }
+    return { Tag: { Content: roleMention(Role.id), AllowedMentions: { parse: [], roles: [Role.id] } } };
 }
 
 // Options waiting for the modal, which can only carry a short ID. Kept in memory for 15 minutes.
@@ -260,13 +281,13 @@ export async function HandleSayEmbedModal(Interaction, Context, { Arguments, Sto
     });
 
     await Interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    // The tagged role goes above the embed, because mentions inside an embed never ping. Nothing else pings.
+    // The tag goes above the embed, because mentions inside an embed never ping. Nothing else pings.
     const Sent = await Channel.send({
-        content: Pending.RoleId ? roleMention(Pending.RoleId) : undefined,
+        content: Pending.Tag?.Content,
         embeds: [Embed],
         files: Files,
-        allowedMentions: { parse: [], roles: Pending.RoleId ? [Pending.RoleId] : [] },
+        allowedMentions: Pending.Tag?.AllowedMentions ?? { parse: [], roles: [] },
     });
-    Context.Logger.Info('Embed sent with /sayembed', { StaffDiscordUserId: Interaction.user.id, GuildId: Interaction.guildId, ChannelId: Channel.id, MessageId: Sent.id, TaggedRoleId: Pending.RoleId });
+    Context.Logger.Info('Embed sent with /sayembed', { StaffDiscordUserId: Interaction.user.id, GuildId: Interaction.guildId, ChannelId: Channel.id, MessageId: Sent.id, Tagged: Pending.Tag?.Content ?? null });
     await FinishSay(Interaction, Context, Sent, 'HandleSayEmbed');
 }

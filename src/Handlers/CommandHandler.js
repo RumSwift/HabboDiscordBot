@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { REST, Routes } from 'discord.js';
+import { StaffPermission } from '../Utils/StaffAccess.js';
 
 const DefaultCommandsDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'Commands');
 
@@ -53,6 +54,10 @@ export function ValidateCommand(Command) {
     }
     if (typeof Command.Execute !== 'function') {
         return 'Execute must be a function';
+    }
+    // Staff commands must be hidden from members without Manage Messages, as well as checked when run.
+    if (Command.StaffOnly && Command.Data.toJSON().default_member_permissions !== String(StaffPermission)) {
+        return 'a StaffOnly command must use setDefaultMemberPermissions(StaffPermission)';
     }
     for (const Key of ['ComponentHandlers', 'ModalHandlers']) {
         const Handlers = Command[Key];

@@ -1,6 +1,7 @@
 import { MessageFlags } from 'discord.js';
 import { AnyUser, ParseCustomId } from '../Utils/CustomId.js';
 import { BuildErrorView, EphemeralView } from '../Components/ComponentStyles.js';
+import { IsStaff, StaffOnlyMessage } from '../Utils/StaffAccess.js';
 
 export class InteractionHandler {
     constructor({ Commands, ComponentHandlers, ModalHandlers, Context, Logger }) {
@@ -36,6 +37,11 @@ export class InteractionHandler {
         if (!Command) {
             this.Logger.Warn('Received an unknown slash command', { CommandName: Interaction.commandName });
             await Interaction.reply({ content: 'This command is no longer available.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+        if (Command.StaffOnly && !(await IsStaff(Interaction, this.Context.Services.GuildConfigurationRepository))) {
+            this.Logger.Warn('Non-staff member tried to use a staff command', { DiscordUserId: Interaction.user.id, GuildId: Interaction.guildId, CommandName: Interaction.commandName });
+            await Interaction.reply({ content: StaffOnlyMessage, flags: MessageFlags.Ephemeral });
             return;
         }
         await Command.Execute(Interaction, this.Context);
